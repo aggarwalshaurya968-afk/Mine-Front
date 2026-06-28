@@ -15,8 +15,8 @@ CATEGORY_QUESTIONS = {
         ('Description',   'Please describe your issue in detail.',      False),
     ],
     'Staff Apply': [
-        ('Order / Invoice #', 'Why do you want to become a staff member?', False),
-        ('Issue',             'Do you uave any previous staff experience if yes, explain.', False),
+        ('Question:1#', 'Why do you want to become a staff member?', False),
+        ('Question:2',             'Do you uave any previous staff experience if yes, explain.', False),
     ],
     'Report User': [
         ('Reported User',   'Username, display name, or ID of the user you are reporting.', False),
