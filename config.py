@@ -15,7 +15,7 @@ CATEGORY_QUESTIONS = {
         ('Description',   'Please describe your issue in detail.',      False),
     ],
     'Staff Apply': [
-        ('Question:1#', 'Why do you want to become a staff member?', False),
+        ('Question:1', 'Why do you want to become a staff member?', False),
         ('Question:2',             'Do you uave any previous staff experience if yes, explain.', False),
     ],
     'Report User': [
