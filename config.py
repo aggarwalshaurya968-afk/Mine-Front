@@ -14,9 +14,9 @@ CATEGORY_QUESTIONS = {
         ('Subject',       'What is the subject of your issue?',        False),
         ('Description',   'Please describe your issue in detail.',      False),
     ],
-    'Billing Support': [
-        ('Order / Invoice #', 'What is your order or invoice number?', False),
-        ('Issue',             'Describe your billing issue in detail.', False),
+    'Staff Apply': [
+        ('Order / Invoice #', 'Why do you want to become a staff member?', False),
+        ('Issue',             'Do you uave any previous staff experience if yes, explain.', False),
     ],
     'Report User': [
         ('Reported User',   'Username, display name, or ID of the user you are reporting.', False),
