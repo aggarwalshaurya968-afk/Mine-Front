@@ -94,7 +94,7 @@ class Database:
                 ('Staff Apply',  '💳', 'Staff Applications'),
                 ('Report User',      '🚨', 'Report a member for breaking the rules'),
                 ('Partnership',      '🤝', 'Discuss collaboration & partnership opportunities'),
-                ('Support Ticket',      '🎫',, 'Need? Support let us know how we can help.'),
+                ('Support Ticket',      '🎫', 'Need? Support let us know how we can help.'),
             ]
             for name, emoji, desc in defaults:
                 await db.execute(
