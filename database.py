@@ -91,7 +91,7 @@ class Database:
             )
             defaults = [
                 ('General Support',  '🎫', 'Get help with general questions & issues'),
-                ('Staff Apply',  '💳', 'Staff Applications'),
+                ('Staff Apply',  '🧑‍💼', 'Staff Applications'),
                 ('Report User',      '🚨', 'Report a member for breaking the rules'),
                 ('Partnership',      '🤝', 'Discuss collaboration & partnership opportunities'),
                 ('Support Ticket',      '🎫', 'Need? Support let us know how we can help.'),
