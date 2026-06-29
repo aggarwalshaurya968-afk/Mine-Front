@@ -25,5 +25,7 @@ CATEGORY_QUESTIONS = {
     'Partnership': [
         ('Server Name & Size', 'What is your server name and how many members do you have?', False),
         ('Proposal',           'Describe your partnership proposal.',                         False),
-    ],
+    ],'Support Ticket': [
+        ('Question:1', ' What do you need support with?', False),
+        ('Question:2',           'Describe your issue .',                         False),
 }
