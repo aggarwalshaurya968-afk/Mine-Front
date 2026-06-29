@@ -26,7 +26,7 @@ def ticket_panel(guild: discord.Guild, categories: list[dict]) -> discord.Embed:
         for c in categories if c['enabled']
     )
     e = discord.Embed(
-        title='🎫  Support Center',
+        title='🎫 Mine Front Support Center',
         description=(
             f'Welcome to **{guild.name}** Support!\n\n'
             'Select a category below that matches your issue.\n'
