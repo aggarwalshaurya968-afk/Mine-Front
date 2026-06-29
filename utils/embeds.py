@@ -4,7 +4,7 @@ import discord
 from config import (PURPLE, PURPLE_DARK, PURPLE_LIGHT,
                     GREEN, RED, ORANGE, BLUE)
 
-FOOTER = 'Premium Ticket System'
+FOOTER = 'Mine Front Ticket System'
 
 
 def _now_ts() -> int:
