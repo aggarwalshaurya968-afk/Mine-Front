@@ -185,7 +185,7 @@ def build_html(
 
 <div class="footer-bar">
   <span>Transcript generated {generated_at}</span>
-  <span>Premium Ticket System</span>
+  <span>Mine FrontTicket System</span>
 </div>
 </body>
 </html>'''
