@@ -10,6 +10,7 @@ logging.basicConfig(
     format='%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
 logger = logging.getLogger('TicketBot')
 
 
@@ -26,19 +27,24 @@ class TicketBot(commands.Bot):
             help_command=None,
             case_insensitive=True
         )
+
         self.db = Database()
 
     async def setup_hook(self):
         await self.db.init()
         logger.info('Database initialized.')
 
-        for cog in ['cogs.tickets', 'cogs.admin', 
+        # ✅ FIXED COG LOOP (was broken)
+        cogs = ['cogs.tickets', 'cogs.admin']
+
+        for cog in cogs:
             try:
                 await self.load_extension(cog)
                 logger.info(f'Loaded cog: {cog}')
             except Exception as e:
                 logger.exception(f'Failed to load cog {cog}: {e}')
 
+        # sync slash commands
         try:
             synced = await self.tree.sync()
             logger.info(f'Synced {len(synced)} slash command(s) globally.')
@@ -48,6 +54,7 @@ class TicketBot(commands.Bot):
     async def on_ready(self):
         logger.info(f'Logged in as {self.user} (ID: {self.user.id})')
         logger.info(f'Serving {len(self.guilds)} guild(s).')
+
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
@@ -72,8 +79,9 @@ class TicketBot(commands.Bot):
 
 def main():
     token = os.getenv('DISCORD_TOKEN')
+
     if not token:
-        logger.critical('DISCORD_TOKEN environment variable is not set! Exiting.')
+        logger.critical('DISCORD_TOKEN environment variable is not set!')
         sys.exit(1)
 
     bot = TicketBot()
