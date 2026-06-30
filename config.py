@@ -30,11 +30,4 @@ CATEGORY_QUESTIONS = {
         ('Question:1', ' What do you need support with?', False),
         ('Question:2',           'Describe your issue .', False),
     ],
-    'Tier Tester Apply': [
-    ('IGN', 'What is your Minecraft IGN?', False),
-    ('Device', 'Which device do you use? (PC / Mobile / Tablet)', False),
-    ('Version', 'Java or Bedrock/MCPE?', False),
-    ('Main Game Mode', 'Which game mode do you mainly play?', False),
-    ('Experience', 'Have you done tier testing before? If yes, explain.', False),
-],
 }
