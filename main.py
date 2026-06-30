@@ -1,6 +1,5 @@
 import os
 import sys
-import asyncio
 import logging
 import discord
 from discord.ext import commands
@@ -33,7 +32,7 @@ class TicketBot(commands.Bot):
         await self.db.init()
         logger.info('Database initialized.')
 
-            for cog in ['cogs.tickets', 'cogs.admin']:
+        for cog in ['cogs.tickets', 'cogs.admin']:
             try:
                 await self.load_extension(cog)
                 logger.info(f'Loaded cog: {cog}')
@@ -52,7 +51,7 @@ class TicketBot(commands.Bot):
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
-                name='🎫  Mine Front Support '
+                name='🎫 Mine Front Support'
             ),
             status=discord.Status.online
         )
@@ -64,7 +63,8 @@ class TicketBot(commands.Bot):
     async def on_application_command_error(self, interaction: discord.Interaction, error: Exception):
         if isinstance(error, discord.app_commands.MissingPermissions):
             await interaction.response.send_message(
-                '❌ You do not have permission to use this command.', ephemeral=True
+                '❌ You do not have permission to use this command.',
+                ephemeral=True
             )
         else:
             logger.exception(f'Unhandled command error: {error}')
