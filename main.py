@@ -33,7 +33,7 @@ class TicketBot(commands.Bot):
         await self.db.init()
         logger.info('Database initialized.')
 
-                  for cog in ['cogs.tickets', 'cogs.admin', 'cogs.tier_test']:
+            for cog in ['cogs.tickets', 'cogs.admin']:
             try:
                 await self.load_extension(cog)
                 logger.info(f'Loaded cog: {cog}')
