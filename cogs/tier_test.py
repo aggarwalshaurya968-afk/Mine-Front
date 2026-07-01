@@ -6,15 +6,20 @@ import logging
 logger = logging.getLogger("TierPanel")
 
 
-# =========================
-# BUTTON VIEW (declare first to avoid crash)
-# =========================
+# =========================================================
+# TICKET CONTROL VIEW (CLAIM / CLOSE)
+# =========================================================
 class TierTicketControlView(discord.ui.View):
     def __init__(self, bot):
         super().__init__(timeout=None)
         self.bot = bot
 
-    @discord.ui.button(label="Claim", style=discord.ButtonStyle.success, emoji="👑")
+    @discord.ui.button(
+        label="Claim",
+        style=discord.ButtonStyle.success,
+        emoji="👑",
+        custom_id="tier_claim_button"
+    )
     async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             ticket = await self.bot.db.get_ticket_by_channel(interaction.channel.id)
@@ -35,7 +40,12 @@ class TierTicketControlView(discord.ui.View):
             logger.exception("Claim failed")
             await interaction.response.send_message("❌ Claim failed", ephemeral=True)
 
-    @discord.ui.button(label="Close", style=discord.ButtonStyle.danger, emoji="🔒")
+    @discord.ui.button(
+        label="Close",
+        style=discord.ButtonStyle.danger,
+        emoji="🔒",
+        custom_id="tier_close_button"
+    )
     async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             await interaction.response.send_message("🔒 Closing ticket...", ephemeral=True)
@@ -44,9 +54,9 @@ class TierTicketControlView(discord.ui.View):
             logger.exception("Close failed")
 
 
-# =========================
+# =========================================================
 # MODAL
-# =========================
+# =========================================================
 class TierApplicationModal(discord.ui.Modal):
     def __init__(self, bot, edition: str):
         super().__init__(title=f"{edition} Application")
@@ -97,7 +107,7 @@ class TierApplicationModal(discord.ui.Modal):
                 f"🎫 **Tier Ticket Created**\n"
                 f"👤 {user.mention}\n"
                 f"🎮 Edition: {self.edition}\n\n"
-                f"Use buttons or /claim",
+                f"Use buttons below or /claim",
                 view=view
             )
 
@@ -110,37 +120,47 @@ class TierApplicationModal(discord.ui.Modal):
             logger.exception("Modal submit failed")
             try:
                 await interaction.followup.send(
-                    "❌ Something went wrong while creating ticket",
+                    "❌ Something went wrong",
                     ephemeral=True
                 )
             except:
                 pass
 
 
-# =========================
+# =========================================================
 # PANEL VIEW
-# =========================
+# =========================================================
 class TierPanelView(discord.ui.View):
     def __init__(self, bot):
         super().__init__(timeout=None)
         self.bot = bot
 
-    @discord.ui.button(label="Java Edition", style=discord.ButtonStyle.success, emoji="🟩")
+    @discord.ui.button(
+        label="Java Edition",
+        style=discord.ButtonStyle.success,
+        emoji="🟩",
+        custom_id="tier_java_button"
+    )
     async def java(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(
             TierApplicationModal(self.bot, "Java Edition")
         )
 
-    @discord.ui.button(label="Bedrock Edition", style=discord.ButtonStyle.primary, emoji="🟦")
+    @discord.ui.button(
+        label="Bedrock Edition",
+        style=discord.ButtonStyle.primary,
+        emoji="🟦",
+        custom_id="tier_bedrock_button"
+    )
     async def bedrock(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(
             TierApplicationModal(self.bot, "Bedrock Edition")
         )
 
 
-# =========================
+# =========================================================
 # COG
-# =========================
+# =========================================================
 class TierPanel(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -154,7 +174,7 @@ class TierPanel(commands.Cog):
 
         embed = discord.Embed(
             title="🎮 Tier Applications",
-            description="Click below to apply for Java or Bedrock",
+            description="Click below to apply for Java or Bedrock Edition",
             color=discord.Color.blurple()
         )
 
