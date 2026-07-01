@@ -11,18 +11,21 @@ class TierApplicationModal(discord.ui.Modal):
 
         self.ign = discord.ui.TextInput(
             label="Minecraft IGN",
+            placeholder="Enter your Minecraft username",
             required=True,
             max_length=32
         )
 
         self.age = discord.ui.TextInput(
             label="Age",
+            placeholder="Enter your age",
             required=True,
             max_length=3
         )
 
         self.region = discord.ui.TextInput(
             label="Region",
+            placeholder="Country / Region",
             required=True,
             max_length=50
         )
@@ -35,7 +38,7 @@ class TierApplicationModal(discord.ui.Modal):
         guild = interaction.guild
         user = interaction.user
 
-        # CATEGORY
+        # CATEGORY CREATE / GET
         category = discord.utils.get(guild.categories, name="Tickets")
         if category is None:
             category = await guild.create_category("Tickets")
@@ -49,7 +52,7 @@ class TierApplicationModal(discord.ui.Modal):
         await channel.set_permissions(guild.default_role, view_channel=False)
         await channel.set_permissions(user, view_channel=True, send_messages=True)
 
-        # DATABASE ENTRY (IMPORTANT)
+        # ✅ DATABASE ENTRY (IMPORTANT - FOR CLAIM SYSTEM)
         await self.bot.db.create_ticket(
             user_id=user.id,
             channel_id=channel.id,
@@ -60,8 +63,8 @@ class TierApplicationModal(discord.ui.Modal):
         # MESSAGE IN TICKET
         await channel.send(
             f"🎫 **Tier Ticket Created**\n"
-            f"User: {user.mention}\n"
-            f"Edition: {self.edition}\n\n"
+            f"👤 User: {user.mention}\n"
+            f"🎮 Edition: {self.edition}\n\n"
             f"👉 Use `/claim` to claim this ticket"
         )
 
@@ -106,14 +109,14 @@ class TierPanel(commands.Cog):
 
     @app_commands.command(
         name="tierpanel",
-        description="Send Tier Tester panel"
+        description="Send Tier Tester application panel"
     )
     @app_commands.default_permissions(administrator=True)
     async def tierpanel(self, interaction: discord.Interaction):
 
         embed = discord.Embed(
             title="🎮 Tier Tester Applications",
-            description="Select edition to apply",
+            description="Click below to apply for Tier Tester.",
             color=discord.Color.blurple()
         )
 
