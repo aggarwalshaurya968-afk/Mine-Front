@@ -7,6 +7,44 @@ logger = logging.getLogger("TierPanel")
 
 
 # =========================
+# BUTTON VIEW (declare first to avoid crash)
+# =========================
+class TierTicketControlView(discord.ui.View):
+    def __init__(self, bot):
+        super().__init__(timeout=None)
+        self.bot = bot
+
+    @discord.ui.button(label="Claim", style=discord.ButtonStyle.success, emoji="👑")
+    async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            ticket = await self.bot.db.get_ticket_by_channel(interaction.channel.id)
+
+            if not ticket:
+                return await interaction.response.send_message("❌ Not a ticket", ephemeral=True)
+
+            if ticket.get("claimed_by"):
+                return await interaction.response.send_message("⚠️ Already claimed", ephemeral=True)
+
+            await self.bot.db.claim_ticket(interaction.channel.id, interaction.user.id)
+
+            await interaction.response.send_message(
+                f"👑 Claimed by {interaction.user.mention}"
+            )
+
+        except Exception:
+            logger.exception("Claim failed")
+            await interaction.response.send_message("❌ Claim failed", ephemeral=True)
+
+    @discord.ui.button(label="Close", style=discord.ButtonStyle.danger, emoji="🔒")
+    async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await interaction.response.send_message("🔒 Closing ticket...", ephemeral=True)
+            await interaction.channel.delete()
+        except Exception:
+            logger.exception("Close failed")
+
+
+# =========================
 # MODAL
 # =========================
 class TierApplicationModal(discord.ui.Modal):
@@ -23,54 +61,7 @@ class TierApplicationModal(discord.ui.Modal):
         self.add_item(self.age)
         self.add_item(self.region)
 
-   async def on_submit(self, interaction: discord.Interaction):
-    try:
-        await interaction.response.defer(ephemeral=True)
-
-        guild = interaction.guild
-        user = interaction.user
-
-        category = discord.utils.get(guild.categories, name="Tickets")
-        if category is None:
-            category = await guild.create_category("Tickets")
-
-        channel = await guild.create_text_channel(
-            name=f"tier-{user.name}",
-            category=category
-        )
-
-        await channel.set_permissions(guild.default_role, view_channel=False)
-        await channel.set_permissions(user, view_channel=True, send_messages=True)
-
-        # SAFE DB CALL
-        try:
-            await self.bot.db.create_ticket(
-                user_id=user.id,
-                channel_id=channel.id,
-                ticket_type=f"tier-{self.edition.lower()}",
-                claimed_by=None
-            )
-        except Exception:
-            logger.exception("DB failed but ticket still created")
-
-        await channel.send(
-            f"🎫 Tier Ticket Created\n"
-            f"{user.mention}\n"
-            f"Edition: {self.edition}\n"
-            f"Use /claim"
-        )
-
-        await interaction.followup.send(
-            f"✅ Ticket created: {channel.mention}",
-            ephemeral=True
-        )
-
-    except Exception as e:
-        logger.exception(e)
-        await interaction.followup.send(
-            "❌ Something went wrong while creating ticket",
-            ephemeral=True
-        )
+    async def on_submit(self, interaction: discord.Interaction):
         try:
             await interaction.response.defer(ephemeral=True)
 
@@ -89,25 +80,24 @@ class TierApplicationModal(discord.ui.Modal):
             await channel.set_permissions(guild.default_role, view_channel=False)
             await channel.set_permissions(user, view_channel=True, send_messages=True)
 
-            # DB ENTRY (IMPORTANT FOR CLAIM SYSTEM)
-            await self.bot.db.create_ticket(
-                user_id=user.id,
-                channel_id=channel.id,
-                ticket_type=f"tier-{self.edition.lower()}",
-                claimed_by=None
-            )
+            # SAFE DB CALL
+            try:
+                await self.bot.db.create_ticket(
+                    user_id=user.id,
+                    channel_id=channel.id,
+                    ticket_type=f"tier-{self.edition.lower()}",
+                    claimed_by=None
+                )
+            except Exception:
+                logger.exception("DB error ignored")
 
-            # =========================
-            # ACTION PANEL (CLAIM / CLOSE)
-            # =========================
             view = TierTicketControlView(self.bot)
 
             await channel.send(
                 f"🎫 **Tier Ticket Created**\n"
                 f"👤 {user.mention}\n"
                 f"🎮 Edition: {self.edition}\n\n"
-                f"Use buttons below or `/claim`"
-                ,
+                f"Use buttons or /claim",
                 view=view
             )
 
@@ -116,51 +106,15 @@ class TierApplicationModal(discord.ui.Modal):
                 ephemeral=True
             )
 
-        except Exception as e:
-            logger.exception(e)
-            await interaction.followup.send(
-                "❌ Error creating ticket",
-                ephemeral=True
-            )
-
-
-# =========================
-# BUTTON CONTROL SYSTEM
-# =========================
-class TierTicketControlView(discord.ui.View):
-    def __init__(self, bot):
-        super().__init__(timeout=None)
-        self.bot = bot
-
-    @discord.ui.button(label="Claim", style=discord.ButtonStyle.success, emoji="👑")
-    async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
-        try:
-            ticket = await self.bot.db.get_ticket_by_channel(interaction.channel.id)
-
-            if not ticket:
-                return await interaction.response.send_message("❌ Not a ticket", ephemeral=True)
-
-            if ticket["claimed_by"]:
-                return await interaction.response.send_message("⚠️ Already claimed", ephemeral=True)
-
-            await self.bot.db.claim_ticket(interaction.channel.id, interaction.user.id)
-
-            await interaction.response.send_message(
-                f"👑 Claimed by {interaction.user.mention}"
-            )
-
-        except Exception as e:
-            logger.exception(e)
-            await interaction.response.send_message("❌ Claim failed", ephemeral=True)
-
-    @discord.ui.button(label="Close", style=discord.ButtonStyle.danger, emoji="🔒")
-    async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
-        try:
-            await interaction.response.send_message("🔒 Closing ticket...", ephemeral=True)
-            await interaction.channel.delete()
-
-        except Exception as e:
-            logger.exception(e)
+        except Exception:
+            logger.exception("Modal submit failed")
+            try:
+                await interaction.followup.send(
+                    "❌ Something went wrong while creating ticket",
+                    ephemeral=True
+                )
+            except:
+                pass
 
 
 # =========================
@@ -173,11 +127,15 @@ class TierPanelView(discord.ui.View):
 
     @discord.ui.button(label="Java Edition", style=discord.ButtonStyle.success, emoji="🟩")
     async def java(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(TierApplicationModal(self.bot, "Java Edition"))
+        await interaction.response.send_modal(
+            TierApplicationModal(self.bot, "Java Edition")
+        )
 
     @discord.ui.button(label="Bedrock Edition", style=discord.ButtonStyle.primary, emoji="🟦")
     async def bedrock(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(TierApplicationModal(self.bot, "Bedrock Edition"))
+        await interaction.response.send_modal(
+            TierApplicationModal(self.bot, "Bedrock Edition")
+        )
 
 
 # =========================
@@ -186,6 +144,8 @@ class TierPanelView(discord.ui.View):
 class TierPanel(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+        # persistent views (IMPORTANT)
         bot.add_view(TierPanelView(bot))
         bot.add_view(TierTicketControlView(bot))
 
@@ -194,7 +154,7 @@ class TierPanel(commands.Cog):
 
         embed = discord.Embed(
             title="🎮 Tier Applications",
-            description="Choose Java or Bedrock",
+            description="Click below to apply for Java or Bedrock",
             color=discord.Color.blurple()
         )
 
