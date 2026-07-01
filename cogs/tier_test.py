@@ -1,6 +1,9 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+import logging
+
+logger = logging.getLogger("TierPanel")
 
 
 class TierApplicationModal(discord.ui.Modal):
@@ -11,21 +14,18 @@ class TierApplicationModal(discord.ui.Modal):
 
         self.ign = discord.ui.TextInput(
             label="Minecraft IGN",
-            placeholder="Enter your Minecraft username",
             required=True,
             max_length=32
         )
 
         self.age = discord.ui.TextInput(
             label="Age",
-            placeholder="Enter your age",
             required=True,
             max_length=3
         )
 
         self.region = discord.ui.TextInput(
             label="Region",
-            placeholder="Country / Region",
             required=True,
             max_length=50
         )
@@ -35,43 +35,56 @@ class TierApplicationModal(discord.ui.Modal):
         self.add_item(self.region)
 
     async def on_submit(self, interaction: discord.Interaction):
-        guild = interaction.guild
-        user = interaction.user
+        try:
+            await interaction.response.defer(ephemeral=True)
 
-        # CATEGORY CREATE / GET
-        category = discord.utils.get(guild.categories, name="Tickets")
-        if category is None:
-            category = await guild.create_category("Tickets")
+            guild = interaction.guild
+            user = interaction.user
 
-        # CHANNEL CREATE
-        channel = await guild.create_text_channel(
-            name=f"tier-{user.name}",
-            category=category
-        )
+            category = discord.utils.get(guild.categories, name="Tickets")
+            if category is None:
+                category = await guild.create_category("Tickets")
 
-        await channel.set_permissions(guild.default_role, view_channel=False)
-        await channel.set_permissions(user, view_channel=True, send_messages=True)
+            channel = await guild.create_text_channel(
+                name=f"tier-{user.name}",
+                category=category
+            )
 
-        # ✅ DATABASE ENTRY (IMPORTANT - FOR CLAIM SYSTEM)
-        await self.bot.db.create_ticket(
-            user_id=user.id,
-            channel_id=channel.id,
-            ticket_type=f"tier-{self.edition.lower()}",
-            claimed_by=None
-        )
+            await channel.set_permissions(guild.default_role, view_channel=False)
+            await channel.set_permissions(user, view_channel=True, send_messages=True)
 
-        # MESSAGE IN TICKET
-        await channel.send(
-            f"🎫 **Tier Ticket Created**\n"
-            f"👤 User: {user.mention}\n"
-            f"🎮 Edition: {self.edition}\n\n"
-            f"👉 Use `/claim` to claim this ticket"
-        )
+            # ✅ DATABASE ENTRY (IMPORTANT)
+            await self.bot.db.create_ticket(
+                user_id=user.id,
+                channel_id=channel.id,
+                ticket_type=f"tier-{self.edition.lower()}",
+                claimed_by=None
+            )
 
-        await interaction.response.send_message(
-            f"✅ Ticket created: {channel.mention}",
-            ephemeral=True
-        )
+            await channel.send(
+                f"🎫 **Tier Ticket Created**\n"
+                f"👤 User: {user.mention}\n"
+                f"🎮 Edition: {self.edition}\n\n"
+                f"👉 Use `/claim` to claim this ticket"
+            )
+
+            await interaction.followup.send(
+                f"✅ Ticket created: {channel.mention}",
+                ephemeral=True
+            )
+
+        except Exception as e:
+            logger.exception("Error in Tier Modal submit")
+            if not interaction.response.is_done():
+                await interaction.response.send_message(
+                    "❌ Something went wrong while creating ticket.",
+                    ephemeral=True
+                )
+            else:
+                await interaction.followup.send(
+                    "❌ Something went wrong.",
+                    ephemeral=True
+                )
 
 
 class TierPanelView(discord.ui.View):
@@ -116,7 +129,7 @@ class TierPanel(commands.Cog):
 
         embed = discord.Embed(
             title="🎮 Tier Tester Applications",
-            description="Click below to apply for Tier Tester.",
+            description="Click below to apply for Tier Tester (Java / Bedrock)",
             color=discord.Color.blurple()
         )
 
