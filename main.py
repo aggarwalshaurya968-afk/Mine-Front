@@ -1,19 +1,26 @@
 import os
 import sys
 import logging
+import traceback
 import discord
 from discord.ext import commands
 from database import Database
 
+# =========================
+# LOGGING SETUP
+# =========================
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-logger = logging.getLogger('TicketBot')
+logger = logging.getLogger("TicketBot")
 
 
+# =========================
+# BOT CLASS
+# =========================
 class TicketBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
@@ -22,69 +29,105 @@ class TicketBot(commands.Bot):
         intents.guilds = True
 
         super().__init__(
-            command_prefix='!',
+            command_prefix="!",
             intents=intents,
-            help_command=None,
-            case_insensitive=True
+            help_command=None
         )
 
         self.db = Database()
 
+    # =========================
+    # SETUP HOOK
+    # =========================
     async def setup_hook(self):
-        await self.db.init()
-        logger.info('Database initialized.')
+        logger.info("Starting bot setup...")
 
+        # DB INIT (SAFE)
+        try:
+            await self.db.init()
+            logger.info("Database initialized.")
+        except Exception:
+            logger.error("DB INIT FAILED")
+            logger.error(traceback.format_exc())
+
+        # COGS
         cogs = [
-            'cogs.tickets',
-            'cogs.admin',
-            'cogs.tier_test'
+            "cogs.tickets",
+            "cogs.admin",
+            "cogs.tier_test"
         ]
 
         for cog in cogs:
             try:
                 await self.load_extension(cog)
-                logger.info(f'Loaded cog: {cog}')
-            except Exception as e:
-                logger.exception(f'Failed to load cog {cog}: {e}')
+                logger.info(f"Loaded cog: {cog}")
+            except Exception:
+                logger.error(f"FAILED TO LOAD COG: {cog}")
+                logger.error(traceback.format_exc())
 
-        # Sync slash commands globally
+        # SYNC COMMANDS
         try:
             synced = await self.tree.sync()
-            logger.info(f'Synced {len(synced)} global command(s).')
-        except Exception as e:
-            logger.exception(f'Failed to sync commands: {e}')
+            logger.info(f"Synced {len(synced)} slash commands.")
+        except Exception:
+            logger.error("Slash command sync failed")
+            logger.error(traceback.format_exc())
 
+    # =========================
+    # READY EVENT
+    # =========================
     async def on_ready(self):
-        logger.info(f'Logged in as {self.user} (ID: {self.user.id})')
-        logger.info(f'Serving {len(self.guilds)} guild(s).')
+        logger.info(f"Logged in as {self.user} ({self.user.id})")
+        logger.info(f"Guilds: {len(self.guilds)}")
 
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
-                name='🎫 Mine Front Support'
+                name="🎫 Ticket System"
             ),
             status=discord.Status.online
         )
 
+    # =========================
+    # GUILD JOIN
+    # =========================
     async def on_guild_join(self, guild: discord.Guild):
-        await self.db.setup_guild(guild.id)
-        logger.info(f'Joined guild: {guild.name} ({guild.id})')
+        try:
+            await self.db.setup_guild(guild.id)
+            logger.info(f"Joined guild: {guild.name}")
+        except Exception:
+            logger.error(traceback.format_exc())
 
+    # =========================
+    # ERROR HANDLER
+    # =========================
     async def on_application_command_error(self, interaction: discord.Interaction, error: Exception):
-        if isinstance(error, discord.app_commands.MissingPermissions):
-            await interaction.response.send_message(
-                '❌ You do not have permission to use this command.',
-                ephemeral=True
-            )
-        else:
-            logger.exception(f'Unhandled command error: {error}')
+        logger.error("Command Error:")
+        logger.error(traceback.format_exc())
+
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(
+                    "❌ Something went wrong. Check logs.",
+                    ephemeral=True
+                )
+            else:
+                await interaction.response.send_message(
+                    "❌ Something went wrong. Check logs.",
+                    ephemeral=True
+                )
+        except:
+            pass
 
 
+# =========================
+# MAIN
+# =========================
 def main():
-    token = os.getenv('DISCORD_TOKEN')
+    token = os.getenv("DISCORD_TOKEN")
 
     if not token:
-        logger.critical('DISCORD_TOKEN environment variable is not set!')
+        logger.critical("DISCORD_TOKEN missing!")
         sys.exit(1)
 
     bot = TicketBot()
@@ -92,11 +135,11 @@ def main():
     try:
         bot.run(token, log_handler=None)
     except discord.LoginFailure:
-        logger.critical('Invalid Discord token. Please check your DISCORD_TOKEN secret.')
+        logger.critical("Invalid token!")
         sys.exit(1)
     except KeyboardInterrupt:
-        logger.info('Shutting down...')
+        logger.info("Bot shutting down...")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
