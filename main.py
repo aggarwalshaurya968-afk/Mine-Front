@@ -31,8 +31,28 @@ class TicketBot(commands.Bot):
         self.db = Database()
 
     async def setup_hook(self):
-        await self.db.init()
-        logger.info('Database initialized.')
+    await self.db.init()
+    logger.info('Database initialized.')
+
+    cogs = [
+        'cogs.tickets',
+        'cogs.admin',
+        'cogs.tier_test'
+    ]
+
+    for cog in cogs:
+        try:
+            await self.load_extension(cog)
+            logger.info(f'Loaded cog: {cog}')
+        except Exception as e:
+            logger.exception(f'Failed to load cog {cog}: {e}')
+
+    await self.tree.sync()
+
+    for guild in self.guilds:
+        await self.tree.sync(guild=guild)
+
+    logger.info("Slash commands synced.")
 
         cogs = [
     'cogs.tickets',
