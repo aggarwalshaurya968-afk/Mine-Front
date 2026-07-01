@@ -34,30 +34,32 @@ class TierApplicationModal(discord.ui.Modal):
         self.add_item(self.age)
         self.add_item(self.region)
 
-  async def on_submit(self, interaction: discord.Interaction):
-    guild = interaction.guild
-    user = interaction.user
+    async def on_submit(self, interaction: discord.Interaction):
+        guild = interaction.guild
+        user = interaction.user
 
-    category = discord.utils.get(guild.categories, name="Tickets")
-    if category is None:
-        category = await guild.create_category("Tickets")
+        category = discord.utils.get(guild.categories, name="Tickets")
+        if category is None:
+            category = await guild.create_category("Tickets")
 
-    channel = await guild.create_text_channel(
-        name=f"ticket-{user.name}",
-        category=category
-    )
+        channel = await guild.create_text_channel(
+            name=f"ticket-{user.name}",
+            category=category
+        )
 
-    await channel.set_permissions(guild.default_role, view_channel=False)
-    await channel.set_permissions(user, view_channel=True, send_messages=True)
+        await channel.set_permissions(guild.default_role, view_channel=False)
+        await channel.set_permissions(user, view_channel=True, send_messages=True)
 
-    await channel.send(
-        f"🎫 Ticket created for {user.mention}\nIGN: {self.ign.value}\nAge: {self.age.value}\nRegion: {self.region.value}"
-    )
+        await channel.send(
+            f"🎫 Ticket created for {user.mention}\n"
+            f"IGN: {self.ign.value}\n"
+            f"Age: {self.age.value}\n"
+            f"Region: {self.region.value}"
+        )
 
-    await interaction.response.send_message(
-        f"✅ Ticket created: {channel.mention}",
-        ephemeral=True
-    )
+        await interaction.response.send_message(
+            f"✅ Ticket created: {channel.mention}",
+            ephemeral=True
         )
 
 
@@ -72,11 +74,7 @@ class TierPanelView(discord.ui.View):
         emoji="🟩",
         custom_id="tier_java"
     )
-    async def java(
-        self,
-        interaction: discord.Interaction,
-        button: discord.ui.Button
-    ):
+    async def java(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(
             TierApplicationModal(self.bot, "Java Edition")
         )
@@ -87,11 +85,7 @@ class TierPanelView(discord.ui.View):
         emoji="🟦",
         custom_id="tier_bedrock"
     )
-    async def bedrock(
-        self,
-        interaction: discord.Interaction,
-        button: discord.ui.Button
-    ):
+    async def bedrock(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(
             TierApplicationModal(self.bot, "Bedrock Edition")
         )
