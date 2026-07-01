@@ -83,7 +83,7 @@ class TicketBot(commands.Bot):
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
-                name="🎫 Ticket System"
+                name="🎫 Mine Front Ticket "
             ),
             status=discord.Status.online
         )
