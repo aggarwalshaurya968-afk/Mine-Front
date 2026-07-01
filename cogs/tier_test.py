@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-class TierPanelView(discord.ui.View)
+class TierPanelView(discord.ui.View):
     def __init__(self, bot):
         super().__init__(timeout=None)
         self.bot = bot
