@@ -11,21 +11,18 @@ class TierApplicationModal(discord.ui.Modal):
 
         self.ign = discord.ui.TextInput(
             label="Minecraft IGN",
-            placeholder="Enter your Minecraft username",
             required=True,
             max_length=32
         )
 
         self.age = discord.ui.TextInput(
             label="Age",
-            placeholder="Enter your age",
             required=True,
             max_length=3
         )
 
         self.region = discord.ui.TextInput(
             label="Region",
-            placeholder="Country / Region",
             required=True,
             max_length=50
         )
@@ -34,59 +31,38 @@ class TierApplicationModal(discord.ui.Modal):
         self.add_item(self.age)
         self.add_item(self.region)
 
-async def on_submit(self, interaction: discord.Interaction):
-    guild = interaction.guild
-    user = interaction.user
+    async def on_submit(self, interaction: discord.Interaction):
+        guild = interaction.guild
+        user = interaction.user
 
-    category = discord.utils.get(guild.categories, name="Tickets")
-    if category is None:
-        category = await guild.create_category("Tickets")
-
-    channel = await guild.create_text_channel(
-        name=f"tier-{user.name}",
-        category=category
-    )
-
-    await channel.set_permissions(guild.default_role, view_channel=False)
-    await channel.set_permissions(user, view_channel=True, send_messages=True)
-
-    # DB ENTRY (IMPORTANT)
-    await self.bot.db.create_ticket(
-        user_id=user.id,
-        channel_id=channel.id,
-        ticket_type=f"tier-{self.edition.lower()}",
-        claimed_by=None
-    )
-
-    await channel.send(
-        f"🎫 **Tier Ticket Created**\n"
-        f"User: {user.mention}\n"
-        f"Edition: {self.edition}\n\n"
-        f"Use `/claim` to claim this ticket."
-    )
-
-    await interaction.response.send_message(
-        f"✅ Ticket created: {channel.mention}",
-        ephemeral=True
-    )
-
+        # CATEGORY
         category = discord.utils.get(guild.categories, name="Tickets")
         if category is None:
             category = await guild.create_category("Tickets")
 
+        # CHANNEL CREATE
         channel = await guild.create_text_channel(
-            name=f"ticket-{user.name}",
+            name=f"tier-{user.name}",
             category=category
         )
 
         await channel.set_permissions(guild.default_role, view_channel=False)
         await channel.set_permissions(user, view_channel=True, send_messages=True)
 
+        # DATABASE ENTRY (IMPORTANT)
+        await self.bot.db.create_ticket(
+            user_id=user.id,
+            channel_id=channel.id,
+            ticket_type=f"tier-{self.edition.lower()}",
+            claimed_by=None
+        )
+
+        # MESSAGE IN TICKET
         await channel.send(
-            f"🎫 Ticket created for {user.mention}\n"
-            f"IGN: {self.ign.value}\n"
-            f"Age: {self.age.value}\n"
-            f"Region: {self.region.value}"
+            f"🎫 **Tier Ticket Created**\n"
+            f"User: {user.mention}\n"
+            f"Edition: {self.edition}\n\n"
+            f"👉 Use `/claim` to claim this ticket"
         )
 
         await interaction.response.send_message(
@@ -130,14 +106,14 @@ class TierPanel(commands.Cog):
 
     @app_commands.command(
         name="tierpanel",
-        description="Send the Tier Tester panel."
+        description="Send Tier Tester panel"
     )
     @app_commands.default_permissions(administrator=True)
     async def tierpanel(self, interaction: discord.Interaction):
 
         embed = discord.Embed(
             title="🎮 Tier Tester Applications",
-            description="Choose your edition below to apply.",
+            description="Select edition to apply",
             color=discord.Color.blurple()
         )
 
