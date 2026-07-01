@@ -16,6 +16,11 @@ from cogs.tickets import create_ticket, TicketControlView
 
 logger = logging.getLogger('TicketBot.tier_test')
 
+# Path to the panel banner image. Place your image file at this exact path
+# inside your bot project: Mine-Front-main/assets/tier_testing_banner.png
+BANNER_PATH = 'assets/tier_testing_banner.png'
+BANNER_FILENAME = 'tier_testing_banner.png'
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  TIER SETTINGS STORAGE
@@ -214,7 +219,7 @@ class TierPanelView(discord.ui.View):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  PANEL EMBED  (same visual style as the support ticket panel)
+#  PANEL EMBED  (same visual style as the support ticket panel + banner image)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def tier_panel_embed(guild: discord.Guild) -> discord.Embed:
@@ -238,6 +243,7 @@ def tier_panel_embed(guild: discord.Guild) -> discord.Embed:
         e.set_author(name=f'{guild.name} Tier Tester Applications', icon_url=guild.icon.url)
     else:
         e.set_author(name=f'{guild.name} Tier Tester Applications')
+    e.set_image(url=f'attachment://{BANNER_FILENAME}')
     e.set_footer(text=f'{guild.name} • Premium Support System')
     return e
 
@@ -256,10 +262,21 @@ class TierPanel(commands.Cog, name='TierTest'):
     @app_commands.command(name='tierpanel', description='Post the Tier Tester application panel.')
     @app_commands.default_permissions(administrator=True)
     async def tierpanel(self, interaction: discord.Interaction):
-        await interaction.response.send_message(
-            embed=tier_panel_embed(interaction.guild),
-            view=TierPanelView(self.bot)
-        )
+        try:
+            file = discord.File(BANNER_PATH, filename=BANNER_FILENAME)
+            await interaction.response.send_message(
+                embed=tier_panel_embed(interaction.guild),
+                view=TierPanelView(self.bot),
+                file=file
+            )
+        except FileNotFoundError:
+            logger.warning(f'Banner image not found at {BANNER_PATH}, sending without image.')
+            embed = tier_panel_embed(interaction.guild)
+            embed.set_image(url=None)
+            await interaction.response.send_message(
+                embed=embed,
+                view=TierPanelView(self.bot)
+            )
 
     # /tiersettings lives here too — it uses the SAME guild_settings (log channel,
     # transcript channel, roles, cooldown) as your support tickets, because
