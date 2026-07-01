@@ -34,8 +34,11 @@ class TicketBot(commands.Bot):
         await self.db.init()
         logger.info('Database initialized.')
 
-        # ✅ FIXED COG LOOP (was broken)
-        cogs = ['cogs.tickets', 'cogs.admin']
+        cogs = [
+    'cogs.tickets',
+    'cogs.admin',
+    'cogs.tier_test'
+]
 
         for cog in cogs:
             try:
