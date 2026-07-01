@@ -36,7 +36,6 @@ class TierApplicationModal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message(
-            "✅ Modal working! Ticket creation will be added next.",
             ephemeral=True
         )
 
