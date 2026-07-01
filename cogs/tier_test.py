@@ -23,7 +23,54 @@ class TierApplicationModal(discord.ui.Modal):
         self.add_item(self.age)
         self.add_item(self.region)
 
-    async def on_submit(self, interaction: discord.Interaction):
+   async def on_submit(self, interaction: discord.Interaction):
+    try:
+        await interaction.response.defer(ephemeral=True)
+
+        guild = interaction.guild
+        user = interaction.user
+
+        category = discord.utils.get(guild.categories, name="Tickets")
+        if category is None:
+            category = await guild.create_category("Tickets")
+
+        channel = await guild.create_text_channel(
+            name=f"tier-{user.name}",
+            category=category
+        )
+
+        await channel.set_permissions(guild.default_role, view_channel=False)
+        await channel.set_permissions(user, view_channel=True, send_messages=True)
+
+        # SAFE DB CALL
+        try:
+            await self.bot.db.create_ticket(
+                user_id=user.id,
+                channel_id=channel.id,
+                ticket_type=f"tier-{self.edition.lower()}",
+                claimed_by=None
+            )
+        except Exception:
+            logger.exception("DB failed but ticket still created")
+
+        await channel.send(
+            f"🎫 Tier Ticket Created\n"
+            f"{user.mention}\n"
+            f"Edition: {self.edition}\n"
+            f"Use /claim"
+        )
+
+        await interaction.followup.send(
+            f"✅ Ticket created: {channel.mention}",
+            ephemeral=True
+        )
+
+    except Exception as e:
+        logger.exception(e)
+        await interaction.followup.send(
+            "❌ Something went wrong while creating ticket",
+            ephemeral=True
+        )
         try:
             await interaction.response.defer(ephemeral=True)
 
