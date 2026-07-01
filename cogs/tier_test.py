@@ -34,9 +34,30 @@ class TierApplicationModal(discord.ui.Modal):
         self.add_item(self.age)
         self.add_item(self.region)
 
-    async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.send_message(
-            ephemeral=True
+  async def on_submit(self, interaction: discord.Interaction):
+    guild = interaction.guild
+    user = interaction.user
+
+    category = discord.utils.get(guild.categories, name="Tickets")
+    if category is None:
+        category = await guild.create_category("Tickets")
+
+    channel = await guild.create_text_channel(
+        name=f"ticket-{user.name}",
+        category=category
+    )
+
+    await channel.set_permissions(guild.default_role, view_channel=False)
+    await channel.set_permissions(user, view_channel=True, send_messages=True)
+
+    await channel.send(
+        f"🎫 Ticket created for {user.mention}\nIGN: {self.ign.value}\nAge: {self.age.value}\nRegion: {self.region.value}"
+    )
+
+    await interaction.response.send_message(
+        f"✅ Ticket created: {channel.mention}",
+        ephemeral=True
+    )
         )
 
 
