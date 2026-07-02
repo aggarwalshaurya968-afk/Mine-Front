@@ -83,21 +83,6 @@ class GuildMusicState:
         logger.info(f"Using FFmpeg: {FFMPEG_EXECUTABLE}")
         logger.info(f"Playing URL: {self.current.url}")
 
-        try:
-            source = discord.FFmpegPCMAudio(
-                self.current.url,
-                executable=FFMPEG_EXECUTABLE,
-                **FFMPEG_OPTIONS
-            )
-        logger.info(f"Using FFmpeg: {FFMPEG_EXECUTABLE}")
-        logger.info(f"Playing URL: {self.current.url}")
-
-        try:
-            source = discord.FFmpegPCMAudio(
-                self.current.url,
-                executable=FFMPEG_EXECUTABLE,
-                **FFMPEG_OPTIONS
-            )
         except Exception:
             logger.error('Failed to create audio source', exc_info=True)
             if self.text_channel:
