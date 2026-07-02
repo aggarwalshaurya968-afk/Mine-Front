@@ -75,19 +75,18 @@ class GuildMusicState:
     self.bot.loop.create_task(self._play_next())
 
 async def _play_next(self):
-
     if not self.voice_client or not self.voice_client.is_connected():
         return
 
     if self.loop and self.current:
         self.queue.appendleft(self.current)
 
-        if not self.queue:
-            self.current = None
-            return
+    if not self.queue:
+        self.current = None
+        return
 
-        self.current = self.queue.popleft()
-
+    self.current = self.queue.popleft()
+    
         logger.info(f"Using FFmpeg: {FFMPEG_EXECUTABLE}")
         logger.info(f"Playing: {self.current.title}")
 
