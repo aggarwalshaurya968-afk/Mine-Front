@@ -15,7 +15,9 @@ import utils.embeds as E
 logger = logging.getLogger('TicketBot.music')
 
 # Bundled ffmpeg binary (proven to work — no dependency on system PATH)
-FFMPEG_EXECUTABLE = imageio_ffmpeg.get_ffmpeg_exe()
+import shutil
+
+FFMPEG_EXECUTABLE = shutil.which("ffmpeg") or imageio_ffmpeg.get_ffmpeg_exe()
 
 FFMPEG_OPTIONS = {
     "before_options": "-nostdin -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
