@@ -70,7 +70,7 @@ class GuildMusicState:
         self.loop: bool = False
         self.text_channel: discord.abc.Messageable | None = None
 
-     def play_next(self):
+        def play_next(self):
         if self.loop and self.current:
             self.queue.appendleft(self.current)
 
@@ -83,11 +83,19 @@ class GuildMusicState:
         logger.info(f"Using FFmpeg: {FFMPEG_EXECUTABLE}")
         logger.info(f"Playing URL: {self.current.url}")
 
+        try:
+            source = discord.FFmpegPCMAudio(
+                self.current.url,
+                executable=FFMPEG_EXECUTABLE,
+                **FFMPEG_OPTIONS
+            )
         except Exception:
-            logger.error('Failed to create audio source', exc_info=True)
+            logger.error("Failed to create audio source", exc_info=True)
             if self.text_channel:
                 asyncio.run_coroutine_threadsafe(
-                    self.text_channel.send(embed=E.error('Failed to play track (ffmpeg error). Skipping.')),
+                    self.text_channel.send(
+                        embed=E.error("Failed to play track (FFmpeg error). Skipping.")
+                    ),
                     self.bot.loop
                 )
             self.bot.loop.call_soon_threadsafe(self.play_next)
@@ -95,21 +103,26 @@ class GuildMusicState:
 
         def _after(err):
             if err:
-                logger.error(f'Playback error: {err}')
+                logger.error(f"Playback error: {err}")
                 if self.text_channel:
                     asyncio.run_coroutine_threadsafe(
-                        self.text_channel.send(embed=E.error(f'Playback stopped due to an error: `{err}`')),
+                        self.text_channel.send(
+                            embed=E.error(f"Playback stopped due to an error: `{err}`")
+                        ),
                         self.bot.loop
                     )
+
             self.bot.loop.call_soon_threadsafe(self.play_next)
 
         self.voice_client.play(source, after=_after)
+
         if self.text_channel:
             asyncio.run_coroutine_threadsafe(
-                self.text_channel.send(embed=_now_playing_embed(self.current)),
+                self.text_channel.send(
+                    embed=_now_playing_embed(self.current)
+                ),
                 self.bot.loop
             )
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  EMBED HELPERS
