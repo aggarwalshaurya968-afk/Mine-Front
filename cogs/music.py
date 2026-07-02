@@ -70,13 +70,13 @@ class GuildMusicState:
         self.loop: bool = False
         self.text_channel: discord.abc.Messageable | None = None
 
-    def play_next(self):
-        if self.loop and self.current:
-            self.queue.appendleft(self.current)
+def play_next(self):
+    if self.loop and self.current:
+        self.queue.appendleft(self.current)
 
-        if not self.queue:
-            self.current = None
-            return
+    if not self.queue:
+        self.current = None
+        return
 
         self.current = self.queue.popleft()
 
