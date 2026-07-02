@@ -78,12 +78,10 @@ class GuildMusicState:
         self.current = self.queue.popleft()
 
         try:
-            options = dict(FFMPEG_OPTIONS)
-            options['options'] = f"{options['options']} -filter:a volume={self.volume}"
             source = discord.FFmpegOpusAudio(
                 self.current.url,
                 executable=FFMPEG_EXECUTABLE,
-                **options
+                **FFMPEG_OPTIONS
             )
         except Exception:
             logger.error('Failed to create audio source', exc_info=True)
@@ -297,12 +295,11 @@ class MusicCog(commands.Cog, name='Music'):
         await interaction.response.send_message(embed=_now_playing_embed(state.current))
 
     # ─────────────────────── /volume ─────────────────────────────────────
-    @app_commands.command(name='volume', description='Set the playback volume (0-100). Applies from the next track.')
+    @app_commands.command(name='volume', description='(Currently disabled) Playback volume control.')
     @app_commands.describe(level='Volume percentage')
     async def volume(self, interaction: discord.Interaction, level: app_commands.Range[int, 0, 100]):
-        state = self.get_state(interaction.guild_id)
-        state.volume = level / 100
-        await interaction.response.send_message(embed=E.success(f'🔊  Volume set to {level}% (applies from the next track).'))
+        await interaction.response.send_message(
+            embed=E.error('Volume control is temporarily disabled for playback stability.'), ephemeral=True)
 
     # ─────────────────────── /loop ───────────────────────────────────────
     @app_commands.command(name='loop', description='Toggle looping the current track.')
