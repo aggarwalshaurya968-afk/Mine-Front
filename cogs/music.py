@@ -18,8 +18,9 @@ logger = logging.getLogger('TicketBot.music')
 FFMPEG_EXECUTABLE = imageio_ffmpeg.get_ffmpeg_exe()
 
 FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn'
+    "before_options": "-nostdin -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+    "options": "-vn -loglevel error"
+}
 }
 
 YTDL_OPTIONS = {
