@@ -293,4 +293,3 @@ class MusicCog(commands.Cog, name='Music'):
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(MusicCog(bot))
-
