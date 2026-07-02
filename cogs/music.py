@@ -206,4 +206,4 @@ class MusicCog(commands.Cog, name='Music'):
     @app_commands.describe(query='Song name or URL')
     async def play(self, interaction: discord.Interaction, query: str):
         await interaction.response.defer()
-        state = self.get_state(interaction.guild
+        state = self.get_state(interaction.guild_id)
