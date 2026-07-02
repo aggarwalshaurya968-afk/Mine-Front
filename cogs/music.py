@@ -174,9 +174,13 @@ async def extract(query: str, loop: asyncio.AbstractEventLoop) -> dict:
     data = await loop.run_in_executor(
         None, lambda: ytdl.extract_info(query, download=False)
     )
-    if 'entries' in data:
-        data = data['entries'][0]
-    return data
+    if "entries" in data:
+    data = data["entries"][0]
+
+if "url" not in data:
+    data = ytdl.extract_info(data["webpage_url"], download=False)
+
+return data
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
