@@ -52,10 +52,11 @@ class TicketBot(commands.Bot):
 
         # COGS
         cogs = [
-            "cogs.tickets",
-            "cogs.admin",
-            "cogs.tier_test"
-        ]
+    "cogs.tickets",
+    "cogs.admin",
+    "cogs.tier_test",
+    "cogs.music"
+]
 
         for cog in cogs:
             try:
