@@ -91,17 +91,18 @@ def play_next(self):
         executable=FFMPEG_EXECUTABLE,
         **FFMPEG_OPTIONS
     )
-        except Exception:
-            logger.error("Failed to create audio source", exc_info=True)
-            if self.text_channel:
-                asyncio.run_coroutine_threadsafe(
-                    self.text_channel.send(
-                        embed=E.error("Failed to play track (FFmpeg error). Skipping.")
-                    ),
-                    self.bot.loop
-                )
-            self.bot.loop.call_soon_threadsafe(self.play_next)
-            return
+except Exception:
+    logger.error("Failed to create audio source", exc_info=True)
+    if self.text_channel:
+        asyncio.run_coroutine_threadsafe(
+            self.text_channel.send(
+                embed=E.error("Failed to play track (FFmpeg error). Skipping.")
+            ),
+            self.bot.loop
+        )
+    self.bot.loop.call_soon_threadsafe(self.play_next)
+    return
+
 
         def _after(err):
             if err:
