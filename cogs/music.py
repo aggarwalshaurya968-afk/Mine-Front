@@ -72,9 +72,11 @@ class GuildMusicState:
         self.text_channel: discord.abc.Messageable | None = None
 
     def play_next(self):
-        # loop handling
-        if self.loop and self.current:
-            self.queue.appendleft(self.current)
+    self.bot.loop.create_task(self._play_next())
+
+async def _play_next(self):
+    # loop handling
+    if self.loop and self.current:
 
         if not self.queue:
             self.current = None
