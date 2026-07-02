@@ -40,26 +40,83 @@ ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
 # ═══════════════════════════════════════════════════════════════════════════════
 #  TRACK / QUEUE STATE
 # ═══════════════════════════════════════════════════════════════════════════════
+ 
+class GuildMusicState:
+    def __init__(self, bot: commands.Bot, guild_id: int):
+        self.bot = bot
+        self.guild_id = guild_id
+        self.queue: deque[Track] = deque()
+        self.voice_client: discord.VoiceClient | None = None
+        self.current: Track | None = None
+        self.volume: float = 0.5
+        self.loop: bool = False
+        self.text_channel: discord.abc.Messageable | None = None
 
-class Track:
-    def __init__(self, data: dict, requester: discord.Member):
-        self.title = data.get('title', 'Unknown')
-        self.url = data.get('url')
-        self.webpage_url = data.get('webpage_url', '')
-        self.duration = data.get('duration', 0)
-        self.thumbnail = data.get('thumbnail')
-        self.requester = requester
+    def play_next(self):
+        # loop handling
+        if self.loop and self.current:
+            self.queue.appendleft(self.current)
 
-    @property
-    def duration_str(self) -> str:
-        if not self.duration:
-            return 'Live'
-        m, s = divmod(int(self.duration), 60)
-        h, m = divmod(m, 60)
-        return f'{h:02d}:{m:02d}:{s:02d}' if h else f'{m:02d}:{s:02d}'
+        if not self.queue:
+            self.current = None
+            return
 
+        self.current = self.queue.popleft()
 
+        logger.info(f"Using FFmpeg: {FFMPEG_EXECUTABLE}")
+        logger.info(f"Playing: {self.current.title}")
 
+        try:
+            # extract fresh stream url
+            data = ytdl.extract_info(self.current.webpage_url, download=False)
+
+            source = discord.FFmpegPCMAudio(
+                data["url"],
+                executable=FFMPEG_EXECUTABLE,
+                **FFMPEG_OPTIONS
+            )
+
+        except Exception:
+            logger.error("Failed to create audio source", exc_info=True)
+
+            if self.text_channel:
+                asyncio.run_coroutine_threadsafe(
+                    self.text_channel.send(
+                        embed=E.error("❌ Failed to play track (FFmpeg/yt-dlp error). Skipping.")
+                    ),
+                    self.bot.loop
+                )
+
+            # skip to next track safely
+            self.bot.loop.call_soon_threadsafe(self.play_next)
+            return
+
+        def _after(error: Exception | None):
+            if error:
+                logger.error(f"Playback error: {error}")
+
+                if self.text_channel:
+                    asyncio.run_coroutine_threadsafe(
+                        self.text_channel.send(
+                            embed=E.error(f"Playback stopped due to error: `{error}`")
+                        ),
+                        self.bot.loop
+                    )
+
+            # move to next track
+            self.bot.loop.call_soon_threadsafe(self.play_next)
+
+        # play audio
+        self.voice_client.play(source, after=_after)
+
+        # now playing embed
+        if self.text_channel:
+            asyncio.run_coroutine_threadsafe(
+                self.text_channel.send(
+                    embed=_now_playing_embed(self.current)
+                ),
+                self.bot.loop
+                    )
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  EMBED HELPERS
