@@ -36,6 +36,25 @@ YTDL_OPTIONS = {
 
 ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
 
+class Track:
+    def __init__(self, data: dict, requester: discord.Member):
+        self.title = data.get('title', 'Unknown')
+        self.url = data.get('url')
+        self.webpage_url = data.get('webpage_url', '')
+        self.duration = data.get('duration', 0)
+        self.thumbnail = data.get('thumbnail')
+        self.requester = requester
+
+    @property
+    def duration_str(self):
+        if not self.duration:
+            return 'Live'
+
+        m, s = divmod(int(self.duration), 60)
+        h, m = divmod(m, 60)
+
+        return f'{h:02d}:{m:02d}:{s:02d}' if h else f'{m:02d}:{s:02d}'
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  TRACK / QUEUE STATE
