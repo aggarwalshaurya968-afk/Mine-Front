@@ -7,15 +7,14 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import yt_dlp
-import imageio_ffmpeg
 
 from config import PURPLE, GREEN, RED, ORANGE, BLUE
 import utils.embeds as E
 
 logger = logging.getLogger('TicketBot.music')
 
-# Bundled ffmpeg binary (no system install needed — works on Railway out of the box)
-FFMPEG_EXECUTABLE = imageio_ffmpeg.get_ffmpeg_exe()
+# Use the system ffmpeg installed via nixpacks.toml (more reliable than the bundled binary)
+FFMPEG_EXECUTABLE = 'ffmpeg'
 
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
