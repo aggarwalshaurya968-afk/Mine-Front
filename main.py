@@ -35,6 +35,7 @@ class TicketBot(commands.Bot):
         )
 
         self.db = Database()
+        self.tree.on_error = self.on_app_command_error
 
     # =========================
     # SETUP HOOK
@@ -52,11 +53,11 @@ class TicketBot(commands.Bot):
 
         # COGS
         cogs = [
-    "cogs.tickets",
-    "cogs.admin",
-    "cogs.tier_test",
-    "cogs.music"
-]
+            "cogs.tickets",
+            "cogs.admin",
+            "cogs.tier_test",
+            "cogs.music"
+        ]
 
         for cog in cogs:
             try:
@@ -102,19 +103,19 @@ class TicketBot(commands.Bot):
     # =========================
     # ERROR HANDLER
     # =========================
-    async def on_application_command_error(self, interaction: discord.Interaction, error: Exception):
-        logger.error("Command Error:")
-        logger.error(traceback.format_exc())
+    async def on_app_command_error(self, interaction: discord.Interaction, error: Exception):
+        logger.error("Slash Command Error:")
+        logger.error("".join(traceback.format_exception(type(error), error, error.__traceback__)))
 
         try:
             if interaction.response.is_done():
                 await interaction.followup.send(
-                    "❌ Something went wrong. Check logs.",
+                    "❌ Something went wrong running that command. Check bot logs.",
                     ephemeral=True
                 )
             else:
                 await interaction.response.send_message(
-                    "❌ Something went wrong. Check logs.",
+                    "❌ Something went wrong running that command. Check bot logs.",
                     ephemeral=True
                 )
         except:
@@ -144,3 +145,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
