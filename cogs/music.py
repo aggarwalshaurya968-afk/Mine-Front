@@ -74,11 +74,11 @@ class GuildMusicState:
         if self.loop and self.current:
             self.queue.appendleft(self.current)
 
-        if not self.queue:
-            self.current = None
-            return
+       if not self.queue:
+    self.current = None
+    return
 
-               self.current = self.queue.popleft()
+        self.current = self.queue.popleft()
 
         logger.info(f"Using FFmpeg: {FFMPEG_EXECUTABLE}")
         logger.info(f"Playing URL: {self.current.url}")
