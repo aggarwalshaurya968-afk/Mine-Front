@@ -23,12 +23,14 @@ FFMPEG_OPTIONS = {
 }
 
 YTDL_OPTIONS = {
-    'format': 'bestaudio/best',
-    'noplaylist': True,
-    'quiet': True,
-    'no_warnings': True,
-    'default_search': 'scsearch',
-    'source_address': '0.0.0.0',
+    "format": "bestaudio/best/bestaudio[ext=m4a]",
+    "noplaylist": True,
+    "quiet": True,
+    "no_warnings": True,
+    "default_search": "ytsearch",
+    "extract_flat": False,
+    "source_address": "0.0.0.0",
+}
 }
 
 ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
