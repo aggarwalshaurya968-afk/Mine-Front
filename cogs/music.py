@@ -7,11 +7,15 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import yt_dlp
+import imageio_ffmpeg
 
 from config import PURPLE, GREEN, RED, ORANGE, BLUE
 import utils.embeds as E
 
 logger = logging.getLogger('TicketBot.music')
+
+# Bundled ffmpeg binary (no system install needed — works on Railway out of the box)
+FFMPEG_EXECUTABLE = imageio_ffmpeg.get_ffmpeg_exe()
 
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamdelay_max 5',
@@ -29,10 +33,6 @@ YTDL_OPTIONS = {
 
 ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  TRACK / QUEUE STATE
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class Track:
     def __init__(self, data: dict, requester: discord.Member):
@@ -72,14 +72,34 @@ class GuildMusicState:
             return
 
         self.current = self.queue.popleft()
-        source = discord.PCMVolumeTransformer(
-            discord.FFmpegPCMAudio(self.current.url, **FFMPEG_OPTIONS),
-            volume=self.volume
-        )
+
+        try:
+            source = discord.PCMVolumeTransformer(
+                discord.FFmpegPCMAudio(
+                    self.current.url,
+                    executable=FFMPEG_EXECUTABLE,
+                    **FFMPEG_OPTIONS
+                ),
+                volume=self.volume
+            )
+        except Exception:
+            logger.error('Failed to create audio source', exc_info=True)
+            if self.text_channel:
+                asyncio.run_coroutine_threadsafe(
+                    self.text_channel.send(embed=E.error('Failed to play track (ffmpeg error). Skipping.')),
+                    self.bot.loop
+                )
+            self.bot.loop.call_soon_threadsafe(self.play_next)
+            return
 
         def _after(err):
             if err:
                 logger.error(f'Playback error: {err}')
+                if self.text_channel:
+                    asyncio.run_coroutine_threadsafe(
+                        self.text_channel.send(embed=E.error(f'Playback stopped due to an error: `{err}`')),
+                        self.bot.loop
+                    )
             self.bot.loop.call_soon_threadsafe(self.play_next)
 
         self.voice_client.play(source, after=_after)
@@ -89,10 +109,6 @@ class GuildMusicState:
                 self.bot.loop
             )
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  EMBED HELPERS
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def _now_playing_embed(track: Track) -> discord.Embed:
     e = discord.Embed(
@@ -142,10 +158,6 @@ def _queue_list_embed(state: GuildMusicState) -> discord.Embed:
     return e
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  YTDL EXTRACTION
-# ═══════════════════════════════════════════════════════════════════════════════
-
 async def extract(query: str, loop: asyncio.AbstractEventLoop) -> dict:
     data = await loop.run_in_executor(
         None, lambda: ytdl.extract_info(query, download=False)
@@ -154,10 +166,6 @@ async def extract(query: str, loop: asyncio.AbstractEventLoop) -> dict:
         data = data['entries'][0]
     return data
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  COG
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class MusicCog(commands.Cog, name='Music'):
     def __init__(self, bot: commands.Bot):
@@ -182,7 +190,18 @@ class MusicCog(commands.Cog, name='Music'):
             await state.voice_client.move_to(channel)
         return True
 
-    # ─────────────────────── /play ───────────────────────────────────────
+    @app_commands.command(name='join', description='Join your current voice channel.')
+    async def join(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        state = self.get_state(interaction.guild_id)
+        state.text_channel = interaction.channel
+
+        if not await self._ensure_voice(interaction, state):
+            return
+
+        await interaction.followup.send(
+            embed=E.success(f'✅  Joined {state.voice_client.channel.mention}.'), ephemeral=True)
+
     @app_commands.command(name='play', description='Play a song or add it to the queue.')
     @app_commands.describe(query='Song name or URL')
     async def play(self, interaction: discord.Interaction, query: str):
@@ -208,7 +227,6 @@ class MusicCog(commands.Cog, name='Music'):
             await interaction.followup.send(embed=E.success('Starting playback...'))
             state.play_next()
 
-    # ─────────────────────── /pause ──────────────────────────────────────
     @app_commands.command(name='pause', description='Pause the current track.')
     async def pause(self, interaction: discord.Interaction):
         state = self.get_state(interaction.guild_id)
@@ -217,7 +235,6 @@ class MusicCog(commands.Cog, name='Music'):
         state.voice_client.pause()
         await interaction.response.send_message(embed=E.success('⏸️  Paused.'))
 
-    # ─────────────────────── /resume ─────────────────────────────────────
     @app_commands.command(name='resume', description='Resume the paused track.')
     async def resume(self, interaction: discord.Interaction):
         state = self.get_state(interaction.guild_id)
@@ -226,7 +243,6 @@ class MusicCog(commands.Cog, name='Music'):
         state.voice_client.resume()
         await interaction.response.send_message(embed=E.success('▶️  Resumed.'))
 
-    # ─────────────────────── /skip ───────────────────────────────────────
     @app_commands.command(name='skip', description='Skip the current track.')
     async def skip(self, interaction: discord.Interaction):
         state = self.get_state(interaction.guild_id)
@@ -235,7 +251,6 @@ class MusicCog(commands.Cog, name='Music'):
         state.voice_client.stop()
         await interaction.response.send_message(embed=E.success('⏭️  Skipped.'))
 
-    # ─────────────────────── /stop ───────────────────────────────────────
     @app_commands.command(name='stop', description='Stop playback, clear the queue, and disconnect.')
     async def stop(self, interaction: discord.Interaction):
         state = self.get_state(interaction.guild_id)
@@ -246,13 +261,11 @@ class MusicCog(commands.Cog, name='Music'):
             state.voice_client = None
         await interaction.response.send_message(embed=E.success('⏹️  Stopped and left the voice channel.'))
 
-    # ─────────────────────── /queue ──────────────────────────────────────
     @app_commands.command(name='queue', description='Show the current music queue.')
     async def queue_cmd(self, interaction: discord.Interaction):
         state = self.get_state(interaction.guild_id)
         await interaction.response.send_message(embed=_queue_list_embed(state))
 
-    # ─────────────────────── /nowplaying ─────────────────────────────────
     @app_commands.command(name='nowplaying', description='Show the currently playing track.')
     async def nowplaying(self, interaction: discord.Interaction):
         state = self.get_state(interaction.guild_id)
@@ -260,7 +273,6 @@ class MusicCog(commands.Cog, name='Music'):
             return await interaction.response.send_message(embed=E.error('Nothing is playing.'), ephemeral=True)
         await interaction.response.send_message(embed=_now_playing_embed(state.current))
 
-    # ─────────────────────── /volume ─────────────────────────────────────
     @app_commands.command(name='volume', description='Set the playback volume (0-100).')
     @app_commands.describe(level='Volume percentage')
     async def volume(self, interaction: discord.Interaction, level: app_commands.Range[int, 0, 100]):
@@ -270,7 +282,6 @@ class MusicCog(commands.Cog, name='Music'):
             state.voice_client.source.volume = state.volume
         await interaction.response.send_message(embed=E.success(f'🔊  Volume set to {level}%.'))
 
-    # ─────────────────────── /loop ───────────────────────────────────────
     @app_commands.command(name='loop', description='Toggle looping the current track.')
     async def loop_cmd(self, interaction: discord.Interaction):
         state = self.get_state(interaction.guild_id)
@@ -278,7 +289,6 @@ class MusicCog(commands.Cog, name='Music'):
         status = 'enabled 🔁' if state.loop else 'disabled'
         await interaction.response.send_message(embed=E.success(f'Loop {status}.'))
 
-    # ─────────────────────── /leave ──────────────────────────────────────
     @app_commands.command(name='leave', description='Disconnect the bot from the voice channel.')
     async def leave(self, interaction: discord.Interaction):
         state = self.get_state(interaction.guild_id)
