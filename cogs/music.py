@@ -78,13 +78,12 @@ class GuildMusicState:
         self.current = self.queue.popleft()
 
         try:
-            source = discord.PCMVolumeTransformer(
-                discord.FFmpegPCMAudio(
-                    self.current.url,
-                    executable=FFMPEG_EXECUTABLE,
-                    **FFMPEG_OPTIONS
-                ),
-                volume=self.volume
+            options = dict(FFMPEG_OPTIONS)
+            options['options'] = f"{options['options']} -filter:a volume={self.volume}"
+            source = discord.FFmpegOpusAudio(
+                self.current.url,
+                executable=FFMPEG_EXECUTABLE,
+                **options
             )
         except Exception:
             logger.error('Failed to create audio source', exc_info=True)
@@ -298,14 +297,12 @@ class MusicCog(commands.Cog, name='Music'):
         await interaction.response.send_message(embed=_now_playing_embed(state.current))
 
     # ─────────────────────── /volume ─────────────────────────────────────
-    @app_commands.command(name='volume', description='Set the playback volume (0-100).')
+    @app_commands.command(name='volume', description='Set the playback volume (0-100). Applies from the next track.')
     @app_commands.describe(level='Volume percentage')
     async def volume(self, interaction: discord.Interaction, level: app_commands.Range[int, 0, 100]):
         state = self.get_state(interaction.guild_id)
         state.volume = level / 100
-        if state.voice_client and state.voice_client.source:
-            state.voice_client.source.volume = state.volume
-        await interaction.response.send_message(embed=E.success(f'🔊  Volume set to {level}%.'))
+        await interaction.response.send_message(embed=E.success(f'🔊  Volume set to {level}% (applies from the next track).'))
 
     # ─────────────────────── /loop ───────────────────────────────────────
     @app_commands.command(name='loop', description='Toggle looping the current track.')
@@ -330,4 +327,3 @@ class MusicCog(commands.Cog, name='Music'):
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(MusicCog(bot))
-  
