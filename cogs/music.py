@@ -23,7 +23,6 @@ FFMPEG_OPTIONS = {
     "before_options": "-nostdin -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
     "options": "-vn -loglevel error"
 }
-}
 
 YTDL_OPTIONS = {
     "format": "bestaudio/best/bestaudio[ext=m4a]",
@@ -33,7 +32,6 @@ YTDL_OPTIONS = {
     "default_search": "ytsearch",
     "extract_flat": False,
     "source_address": "0.0.0.0",
-}
 }
 
 ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
