@@ -124,99 +124,48 @@ class GuildMusicState:
 
 def _now_playing_embed(track: Track) -> discord.Embed:
     e = discord.Embed(
-        title='🎶  Now Playing',
+        title='🎶 Now Playing',
         description=f'**[{track.title}]({track.webpage_url})**',
         color=PURPLE
     )
-    e.add_field(name='⏱️  Duration', value=track.duration_str, inline=True)
-    e.add_field(name='🙋  Requested By', value=track.requester.mention, inline=True)
+    e.add_field(name='⏱️ Duration', value=track.duration_str, inline=True)
+    e.add_field(name='🙋 Requested By', value=track.requester.mention, inline=True)
+
     if track.thumbnail:
         e.set_thumbnail(url=track.thumbnail)
-    e.set_footer(text='Mine Front Music')
+
+    e.set_footer(text='Music Bot')
     return e
 
 
 def _queued_embed(track: Track, position: int) -> discord.Embed:
     e = discord.Embed(
-        title='➕  Added to Queue',
+        title='➕ Added to Queue',
         description=f'**[{track.title}]({track.webpage_url})**',
         color=GREEN
     )
- class GuildMusicState:
-    def __init__(self, bot: commands.Bot, guild_id: int):
-        self.bot = bot
-        self.guild_id = guild_id
-        self.queue: deque[Track] = deque()
-        self.voice_client: discord.VoiceClient | None = None
-        self.current: Track | None = None
-        self.volume: float = 0.5
-        self.loop: bool = False
-        self.text_channel: discord.abc.Messageable | None = None
+    e.add_field(name='⏱️ Duration', value=track.duration_str, inline=True)
+    e.add_field(name='📍 Position', value=str(position), inline=True)
 
-    def play_next(self):
-        if self.loop and self.current:
-            self.queue.appendleft(self.current)
-
-        if not self.queue:
-            self.current = None
-            return
-
-        self.current = self.queue.popleft()
-
-        logger.info(f"Using FFmpeg: {FFMPEG_EXECUTABLE}")
-        logger.info(f"Playing URL: {self.current.url}")
-
-        try:
-            data = ytdl.extract_info(self.current.webpage_url, download=False)
-
-            source = discord.FFmpegPCMAudio(
-                data["url"],
-                executable=FFMPEG_EXECUTABLE,
-                **FFMPEG_OPTIONS
-            )
-
-        except Exception:
-            logger.error("Failed to create audio source", exc_info=True)
-            if self.text_channel:
-                asyncio.run_coroutine_threadsafe(
-                    self.text_channel.send(embed=E.error("Failed to play track (FFmpeg error). Skipping.")),
-                    self.bot.loop
-                )
-            self.bot.loop.call_soon_threadsafe(self.play_next)
-            return
-
-        def _after(err):
-            if err:
-                logger.error(f"Playback error: {err}")
-                if self.text_channel:
-                    asyncio.run_coroutine_threadsafe(
-                        self.text_channel.send(embed=E.error(f"Playback error: `{err}`")),
-                        self.bot.loop
-                    )
-
-            self.bot.loop.call_soon_threadsafe(self.play_next)
-
-        self.voice_client.play(source, after=_after)
-
-        if self.text_channel:
-            asyncio.run_coroutine_threadsafe(
-                self.text_channel.send(embed=_now_playing_embed(self.current)),
-                self.bot.loop
-                )   e.add_field(name='⏱️  Duration', value=track.duration_str, inline=True)
-    e.add_field(name='📍  Position', value=str(position), inline=True)
     if track.thumbnail:
         e.set_thumbnail(url=track.thumbnail)
+
     return e
 
 
-def _queue_list_embed(state: GuildMusicState) -> discord.Embed:
-    e = discord.Embed(title='📜  Music Queue', color=BLUE)
+def _queue_list_embed(state: "GuildMusicState") -> discord.Embed:
+    e = discord.Embed(
+        title='📜 Music Queue',
+        color=BLUE
+    )
+
     if state.current:
         e.add_field(
-            name='🎶  Now Playing',
+            name='🎶 Now Playing',
             value=f'[{state.current.title}]({state.current.webpage_url}) • `{state.current.duration_str}`',
             inline=False
         )
+
     if not state.queue:
         e.add_field(name='Up Next', value='Queue is empty.', inline=False)
     else:
@@ -224,9 +173,16 @@ def _queue_list_embed(state: GuildMusicState) -> discord.Embed:
             f'`{i+1}.` [{t.title}]({t.webpage_url}) • `{t.duration_str}` — {t.requester.mention}'
             for i, t in enumerate(list(state.queue)[:10])
         ]
-        e.add_field(name='Up Next', value='\n'.join(lines), inline=False)
+
+        e.add_field(
+            name='Up Next',
+            value='\n'.join(lines),
+            inline=False
+        )
+
         if len(state.queue) > 10:
             e.set_footer(text=f'+{len(state.queue) - 10} more track(s) in queue')
+
     return e
 
 
