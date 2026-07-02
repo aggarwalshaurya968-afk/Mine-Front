@@ -210,9 +210,9 @@ def _queue_list_embed(state: "GuildMusicState") -> discord.Embed:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 async def extract(query: str, loop: asyncio.AbstractEventLoop) -> dict:
-    data = await loop.run_in_executor(
-        None,
-        lambda: ytdl.extract_info(query, download=False)
+  data = await self.bot.loop.run_in_executor(
+    None,
+    lambda: ytdl.extract_info(self.current.webpage_url, download=False)
     )
 
     if "entries" in data:
