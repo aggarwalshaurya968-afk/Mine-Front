@@ -18,7 +18,7 @@ logger = logging.getLogger('TicketBot.music')
 FFMPEG_EXECUTABLE = imageio_ffmpeg.get_ffmpeg_exe()
 
 FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamdelay_max 5',
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'
 }
 
@@ -206,100 +206,4 @@ class MusicCog(commands.Cog, name='Music'):
     @app_commands.describe(query='Song name or URL')
     async def play(self, interaction: discord.Interaction, query: str):
         await interaction.response.defer()
-        state = self.get_state(interaction.guild_id)
-        state.text_channel = interaction.channel
-
-        if not await self._ensure_voice(interaction, state):
-            return
-
-        try:
-            data = await extract(query, self.bot.loop)
-        except Exception:
-            logger.error('yt-dlp extraction failed', exc_info=True)
-            return await interaction.followup.send(embed=E.error('Could not find or load that track.'))
-
-        track = Track(data, interaction.user)
-        state.queue.append(track)
-
-        if state.voice_client.is_playing() or state.voice_client.is_paused():
-            await interaction.followup.send(embed=_queued_embed(track, len(state.queue)))
-        else:
-            await interaction.followup.send(embed=E.success('Starting playback...'))
-            state.play_next()
-
-    @app_commands.command(name='pause', description='Pause the current track.')
-    async def pause(self, interaction: discord.Interaction):
-        state = self.get_state(interaction.guild_id)
-        if not state.voice_client or not state.voice_client.is_playing():
-            return await interaction.response.send_message(embed=E.error('Nothing is playing.'), ephemeral=True)
-        state.voice_client.pause()
-        await interaction.response.send_message(embed=E.success('⏸️  Paused.'))
-
-    @app_commands.command(name='resume', description='Resume the paused track.')
-    async def resume(self, interaction: discord.Interaction):
-        state = self.get_state(interaction.guild_id)
-        if not state.voice_client or not state.voice_client.is_paused():
-            return await interaction.response.send_message(embed=E.error('Nothing is paused.'), ephemeral=True)
-        state.voice_client.resume()
-        await interaction.response.send_message(embed=E.success('▶️  Resumed.'))
-
-    @app_commands.command(name='skip', description='Skip the current track.')
-    async def skip(self, interaction: discord.Interaction):
-        state = self.get_state(interaction.guild_id)
-        if not state.voice_client or not (state.voice_client.is_playing() or state.voice_client.is_paused()):
-            return await interaction.response.send_message(embed=E.error('Nothing is playing.'), ephemeral=True)
-        state.voice_client.stop()
-        await interaction.response.send_message(embed=E.success('⏭️  Skipped.'))
-
-    @app_commands.command(name='stop', description='Stop playback, clear the queue, and disconnect.')
-    async def stop(self, interaction: discord.Interaction):
-        state = self.get_state(interaction.guild_id)
-        state.queue.clear()
-        state.current = None
-        if state.voice_client:
-            await state.voice_client.disconnect()
-            state.voice_client = None
-        await interaction.response.send_message(embed=E.success('⏹️  Stopped and left the voice channel.'))
-
-    @app_commands.command(name='queue', description='Show the current music queue.')
-    async def queue_cmd(self, interaction: discord.Interaction):
-        state = self.get_state(interaction.guild_id)
-        await interaction.response.send_message(embed=_queue_list_embed(state))
-
-    @app_commands.command(name='nowplaying', description='Show the currently playing track.')
-    async def nowplaying(self, interaction: discord.Interaction):
-        state = self.get_state(interaction.guild_id)
-        if not state.current:
-            return await interaction.response.send_message(embed=E.error('Nothing is playing.'), ephemeral=True)
-        await interaction.response.send_message(embed=_now_playing_embed(state.current))
-
-    @app_commands.command(name='volume', description='Set the playback volume (0-100).')
-    @app_commands.describe(level='Volume percentage')
-    async def volume(self, interaction: discord.Interaction, level: app_commands.Range[int, 0, 100]):
-        state = self.get_state(interaction.guild_id)
-        state.volume = level / 100
-        if state.voice_client and state.voice_client.source:
-            state.voice_client.source.volume = state.volume
-        await interaction.response.send_message(embed=E.success(f'🔊  Volume set to {level}%.'))
-
-    @app_commands.command(name='loop', description='Toggle looping the current track.')
-    async def loop_cmd(self, interaction: discord.Interaction):
-        state = self.get_state(interaction.guild_id)
-        state.loop = not state.loop
-        status = 'enabled 🔁' if state.loop else 'disabled'
-        await interaction.response.send_message(embed=E.success(f'Loop {status}.'))
-
-    @app_commands.command(name='leave', description='Disconnect the bot from the voice channel.')
-    async def leave(self, interaction: discord.Interaction):
-        state = self.get_state(interaction.guild_id)
-        if not state.voice_client:
-            return await interaction.response.send_message(embed=E.error('I am not in a voice channel.'), ephemeral=True)
-        state.queue.clear()
-        state.current = None
-        await state.voice_client.disconnect()
-        state.voice_client = None
-        await interaction.response.send_message(embed=E.success('👋  Disconnected.'))
-
-
-async def setup(bot: commands.Bot):
-    await bot.add_cog(MusicCog(bot))
+        state = self.get_state(interaction.guild
