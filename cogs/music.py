@@ -81,6 +81,7 @@ class GuildMusicState:
         self.current = self.queue.popleft()
 logger.info(f"Using FFmpeg: {FFMPEG_EXECUTABLE}")
 logger.info(f"Playing URL: {self.current.url}")
+
         try:
             source = discord.FFmpegOpusAudio(
                 self.current.url,
