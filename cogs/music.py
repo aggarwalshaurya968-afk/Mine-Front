@@ -70,16 +70,25 @@ class GuildMusicState:
         self.loop: bool = False
         self.text_channel: discord.abc.Messageable | None = None
 
-    def play_next(self):
+       def play_next(self):
         if self.loop and self.current:
             self.queue.appendleft(self.current)
 
-       if not self.queue:
-    self.current = None
-    return
+        if not self.queue:
+            self.current = None
+            return
 
         self.current = self.queue.popleft()
 
+        logger.info(f"Using FFmpeg: {FFMPEG_EXECUTABLE}")
+        logger.info(f"Playing URL: {self.current.url}")
+
+        try:
+            source = discord.FFmpegPCMAudio(
+                self.current.url,
+                executable=FFMPEG_EXECUTABLE,
+                **FFMPEG_OPTIONS
+            )
         logger.info(f"Using FFmpeg: {FFMPEG_EXECUTABLE}")
         logger.info(f"Playing URL: {self.current.url}")
 
