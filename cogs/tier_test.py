@@ -43,7 +43,6 @@ JAVA_GAMEMODES = [
     ('Build UHC', '<:z_builduhc:1523281258728394843>'),
     ('Crystal', '<:z_crystalpvp:1523281271122559076>'),
     ('SMP PvP', '🌍'),
-    ('UHC', '❤️'),
 ]
 
 # Bedrock Edition gamemodes — using your server's exact custom emojis.
