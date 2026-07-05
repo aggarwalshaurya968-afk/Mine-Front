@@ -44,13 +44,6 @@ JAVA_GAMEMODES = [
     ('Crystal', '<:z_crystalpvp:1523281271122559076>'),
     ('SMP PvP', '🌍'),
     ('UHC', '❤️'),
-    ('Boxing', '<:z_boxing:1523281247328276540>'),
-    ('No Debuff', '<:z_nodebuff:1523281283420258304>'),
-    ('MLG Rush', '<:z_mlgrush:1523281279578017812>'),
-    ('BedFight', '<:z_bedfight:1523281245184725154>'),
-    ('SkyWars', '<:z_skywars:1523281287392133310>'),
-    ('MidFight', '<:z_midfight:1523281277393043626>'),
-    ('Battle Rush', '<:z_battlerush:1523281243242762330>'),
 ]
 
 # Bedrock Edition gamemodes — using your server's exact custom emojis.
