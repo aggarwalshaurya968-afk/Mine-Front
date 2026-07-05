@@ -21,6 +21,27 @@ logger = logging.getLogger('TicketBot.tier_test')
 BANNER_PATH = 'assets/tier_testing_banner.png'
 BANNER_FILENAME = 'tier_testing_banner.png'
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  GAMEMODES — shown in the dropdown when applying for tier tester.
+#  Emojis below are the closest Unicode match to your screenshots. If your
+#  server has custom emojis for these (the icons in your screenshots look
+#  like custom server emojis), send me each one as `<:name:id>` (get that by
+#  typing "\:emojiname:" in Discord and copying what it echoes back) and
+#  I'll drop them in for an exact match.
+# ═══════════════════════════════════════════════════════════════════════════════
+GAMEMODES = [
+    ('Overall (All Game Modes)', '🌐'),
+    ('BedFight', '🛏️'),
+    ('SkyWars', '🏝️'),
+    ('MidFight', '⚔️'),
+    ('MLG Rush', '🏃'),
+    ('Mace', '🔨'),
+    ('UHC', '❤️'),
+    ('Boxing', '🥊'),
+    ('No Debuff', '🧪'),
+    ('Battle Rush', '🏹'),
+]
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  TIER SETTINGS STORAGE
@@ -112,10 +133,11 @@ class TierSettingsView(discord.ui.View):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class TierApplicationModal(discord.ui.Modal):
-    def __init__(self, bot, edition: str):
+    def __init__(self, bot, edition: str, gamemode: str):
         super().__init__(title=f'🎮  {edition} Tier Tester App', timeout=300)
         self.bot = bot
         self.edition = edition
+        self.gamemode = gamemode
 
         self.ign = discord.ui.TextInput(
             label='Minecraft IGN',
@@ -153,6 +175,7 @@ class TierApplicationModal(discord.ui.Modal):
         await interaction.response.defer(ephemeral=True, thinking=True)
         answers = {
             'Minecraft IGN': self.ign.value,
+            'Gamemode': self.gamemode,
             'Age': self.age.value,
             'Why do you want to become a Tier Tester?': self.why.value,
             'Previous Experience': self.experience.value,
@@ -161,7 +184,7 @@ class TierApplicationModal(discord.ui.Modal):
         # same channel setup, same welcome embed style, same DB row,
         # same log-channel logging, same auto-transcript-on-close,
         # same Claim/Close/Reopen/Transcript/Delete buttons.
-        await create_ticket(self.bot, interaction, f'Tier Tester App • {self.edition}', answers)
+        await create_ticket(self.bot, interaction, f'Tier Tester App • {self.gamemode} • {self.edition}', answers)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -172,6 +195,32 @@ class TierPanelView(discord.ui.View):
     def __init__(self, bot):
         super().__init__(timeout=None)
         self.bot = bot
+
+    @discord.ui.select(
+        placeholder='Choose which gamemode you want to become a Tier Tester for…',
+        custom_id='tier:gamemode',
+        options=[
+            discord.SelectOption(label=name, value=name, emoji=emoji)
+            for name, emoji in GAMEMODES
+        ],
+    )
+    async def gamemode_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        gamemode = select.values[0]
+        await interaction.response.send_message(
+            content=f'You picked **{gamemode}**. Now choose your edition:',
+            view=EditionChooseView(self.bot, gamemode),
+            ephemeral=True,
+        )
+
+
+class EditionChooseView(discord.ui.View):
+    """Shown ephemerally after the user picks a gamemode from the panel's
+    dropdown. Carries that gamemode choice into the application modal."""
+
+    def __init__(self, bot, gamemode: str):
+        super().__init__(timeout=120)
+        self.bot = bot
+        self.gamemode = gamemode
 
     async def _open(self, interaction: discord.Interaction, edition: str):
         db = self.bot.db
@@ -205,15 +254,13 @@ class TierPanelView(discord.ui.View):
                 ephemeral=True
             )
 
-        await interaction.response.send_modal(TierApplicationModal(self.bot, edition))
+        await interaction.response.send_modal(TierApplicationModal(self.bot, edition, self.gamemode))
 
-    @discord.ui.button(label='Java Edition', emoji='🟩',
-                       style=discord.ButtonStyle.success, custom_id='tier:java')
+    @discord.ui.button(label='Java Edition', emoji='🟩', style=discord.ButtonStyle.success)
     async def java(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._open(interaction, 'Java Edition')
 
-    @discord.ui.button(label='Bedrock Edition', emoji='🟦',
-                       style=discord.ButtonStyle.primary, custom_id='tier:bedrock')
+    @discord.ui.button(label='Bedrock Edition', emoji='🟦', style=discord.ButtonStyle.primary)
     async def bedrock(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._open(interaction, 'Bedrock Edition')
 
@@ -227,12 +274,12 @@ def tier_panel_embed(guild: discord.Guild) -> discord.Embed:
         title='🎮 Mine Front Tier Tester Applications',
         description=(
             f'Want to become a **Tier Tester** at **{guild.name}**?\n\n'
-            'Choose your edition below and fill out the application.\n'
+            'Pick the gamemode you want to test from the dropdown below, then '
+            'choose your edition (Java/Bedrock) and fill out the application.\n'
             'Our team will review it and get back to you soon.\n\n'
             '━━━━━━━━━━━━━━━━━━━━━━\n'
-            '🟩 **Java Edition** — Apply to test Java tiers\n'
-            '🟦 **Bedrock Edition** — Apply to test Bedrock tiers\n'
-            '━━━━━━━━━━━━━━━━━━━━━━\n\n'
+            + '\n'.join(f'{emoji} **{name}**' for name, emoji in GAMEMODES) +
+            '\n━━━━━━━━━━━━━━━━━━━━━━\n\n'
             '> ⚠️ One application per user · Please be patient'
         ),
         color=PURPLE,
