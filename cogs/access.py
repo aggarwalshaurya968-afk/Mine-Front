@@ -12,7 +12,7 @@ import utils.embeds as E
 logger = logging.getLogger('TicketBot.access')
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  /access  —  PREMIUM ACCESS SYSTEM
+#  /access  —  ACCESS
 #
 #  Sirf bot ka REAL owner (jo Discord Developer Portal me application ka
 #  owner hai — discord.py isko khud verify karta hai, koi role/permission
