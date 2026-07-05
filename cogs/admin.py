@@ -6,21 +6,17 @@ from discord.ext import commands
 
 from config import PURPLE, PURPLE_DARK, GREEN, RED, ORANGE
 import utils.embeds as E
+from cogs.access import require_admin_or_owner
 
 logger = logging.getLogger('TicketBot.admin')
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  HELPERS
+#
+#  Every command in this cog is restricted to a server Admin or the bot's
+#  real Owner via require_admin_or_owner() (shared in cogs/access.py).
 # ═══════════════════════════════════════════════════════════════════════════════
-
-async def _is_admin(bot, interaction: discord.Interaction) -> bool:
-    if interaction.user.guild_permissions.administrator:
-        return True
-    settings = await bot.db.get_settings(interaction.guild_id) or {}
-    admin_roles = settings.get('admin_role_ids', [])
-    member_roles = {r.id for r in interaction.user.roles}
-    return any(r in member_roles for r in admin_roles)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -109,11 +105,7 @@ class AdminPanelView(discord.ui.View):
         self.bot = bot
 
     async def _guard(self, interaction: discord.Interaction) -> bool:
-        if not await _is_admin(self.bot, interaction):
-            await interaction.response.send_message(
-                embed=E.error('You do not have admin permissions.'), ephemeral=True)
-            return False
-        return True
+        return await require_admin_or_owner(self.bot, interaction)
 
     # ── Set Log Channel ────────────────────────────────────────────────────────
     @discord.ui.button(label='Log Channel', emoji='📋', style=discord.ButtonStyle.secondary, row=0)
@@ -448,9 +440,8 @@ class AdminCog(commands.Cog, name='Admin'):
     @app_commands.command(name='adminpanel', description='Open the bot admin control panel.')
     @app_commands.default_permissions(administrator=True)
     async def adminpanel(self, interaction: discord.Interaction):
-        if not await _is_admin(self.bot, interaction):
-            return await interaction.response.send_message(
-                embed=E.error('You do not have permission to use this command.'), ephemeral=True)
+        if not await require_admin_or_owner(self.bot, interaction):
+            return
 
         await self.bot.db.setup_guild(interaction.guild_id)
         settings = await self.bot.db.get_settings(interaction.guild_id)
@@ -462,14 +453,13 @@ class AdminCog(commands.Cog, name='Admin'):
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     # ── /blacklist ─────────────────────────────────────────────────────────────
-    @app_commands.command(name='blacklist', description='Blacklist a user from creating tickets.')
+    app_commands.command(name='blacklist', description='Blacklist a user from creating tickets.')
     @app_commands.describe(user='User to blacklist', reason='Reason for blacklisting')
     @app_commands.default_permissions(manage_guild=True)
     async def blacklist(self, interaction: discord.Interaction,
                         user: discord.Member, reason: str = ''):
-        if not await _is_admin(self.bot, interaction):
-            return await interaction.response.send_message(
-                embed=E.error('No permission.'), ephemeral=True)
+        if not await require_admin_or_owner(self.bot, interaction):
+            return
         await self.bot.db.blacklist_user(interaction.guild_id, user.id, reason)
         await interaction.response.send_message(
             embed=E.success(f'{user.mention} has been blacklisted.\nReason: {reason or "None"}'),
@@ -480,9 +470,8 @@ class AdminCog(commands.Cog, name='Admin'):
     @app_commands.describe(user='User to unblacklist')
     @app_commands.default_permissions(manage_guild=True)
     async def unblacklist(self, interaction: discord.Interaction, user: discord.Member):
-        if not await _is_admin(self.bot, interaction):
-            return await interaction.response.send_message(
-                embed=E.error('No permission.'), ephemeral=True)
+        if not await require_admin_or_owner(self.bot, interaction):
+            return
         await self.bot.db.unblacklist_user(interaction.guild_id, user.id)
         await interaction.response.send_message(
             embed=E.success(f'{user.mention} has been removed from the blacklist.'),
@@ -505,9 +494,8 @@ class AdminCog(commands.Cog, name='Admin'):
     @app_commands.default_permissions(administrator=True)
     async def setrole(self, interaction: discord.Interaction,
                       role_type: str, role: discord.Role):
-        if not await _is_admin(self.bot, interaction):
-            return await interaction.response.send_message(
-                embed=E.error('No permission.'), ephemeral=True)
+        if not await require_admin_or_owner(self.bot, interaction):
+            return
         settings = await self.bot.db.get_settings(interaction.guild_id) or {}
         await self.bot.db.setup_guild(interaction.guild_id)
         current = settings.get(role_type, [])
@@ -532,9 +520,8 @@ class AdminCog(commands.Cog, name='Admin'):
     @app_commands.default_permissions(administrator=True)
     async def removerole(self, interaction: discord.Interaction,
                          role_type: str, role: discord.Role):
-        if not await _is_admin(self.bot, interaction):
-            return await interaction.response.send_message(
-                embed=E.error('No permission.'), ephemeral=True)
+        if not await require_admin_or_owner(self.bot, interaction):
+            return
         settings = await self.bot.db.get_settings(interaction.guild_id) or {}
         current = [r for r in settings.get(role_type, []) if r != role.id]
         await self.bot.db.update_setting(interaction.guild_id, role_type, current)
@@ -546,9 +533,8 @@ class AdminCog(commands.Cog, name='Admin'):
     @app_commands.command(name='settings', description='View the current bot settings.')
     @app_commands.default_permissions(manage_guild=True)
     async def settings(self, interaction: discord.Interaction):
-        if not await _is_admin(self.bot, interaction):
-            return await interaction.response.send_message(
-                embed=E.error('No permission.'), ephemeral=True)
+        if not await require_admin_or_owner(self.bot, interaction):
+            return
         await self.bot.db.setup_guild(interaction.guild_id)
         settings = await self.bot.db.get_settings(interaction.guild_id)
         categories = await self.bot.db.get_categories(interaction.guild_id)
@@ -556,8 +542,11 @@ class AdminCog(commands.Cog, name='Admin'):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     # ── /botping ───────────────────────────────────────────────────────────────
-    @app_commands.command(name='botping', description='Check the bot latency.')
+    @app_commands.command(name='botping', description='(Admin/Owner only) Check the bot latency.')
+    @app_commands.default_permissions(administrator=True)
     async def botping(self, interaction: discord.Interaction):
+        if not await require_admin_or_owner(self.bot, interaction):
+            return
         latency = round(self.bot.latency * 1000)
         color = GREEN if latency < 100 else ORANGE if latency < 200 else RED
         e = E.base('🏓  Pong!', f'Latency: **{latency}ms**', color=color)
