@@ -12,7 +12,7 @@ import utils.embeds as E
 logger = logging.getLogger('TicketBot.access')
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  /access  —  PREMIUM ACCESS SYSTEM
+#  /access  —  ACCESS
 #
 #  Only the bot's REAL owner (the actual owner of the application in the
 #  Discord Developer Portal — discord.py verifies this itself, it cannot
