@@ -26,28 +26,26 @@ BANNER_FILENAME = 'tier_testing_banner.png'
 #  that edition's gamemodes show up in the dropdown.
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Java Edition gamemodes (Unicode emoji placeholders — send me your server's
-# custom emoji codes for these the same way you did for Bedrock, and I'll
-# swap them in for an exact match).
+# Java Edition gamemodes
 JAVA_GAMEMODES = [
     ('Overall (All Game Modes)', '🌐'),
     ('Nethpot', '🧪'),
     ('Axe', '🪓'),
     ('Dia Pot', '💎'),
-    ('Mace', '🔨'),
+    ('Mace', '<:z_mace:1441952928578539583>'),
     ('Spear Mace', '🔱'),
     ('Cart PvP', '🛒'),
-    ('Build UHC', '🏗️'),
-    ('Crystal', '🔮'),
+    ('Build UHC', '<:z_builduhc:1043720241391349780>'),
+    ('Crystal', '<:z_crystalpvp:1348715818371776614>'),
     ('SMP PvP', '🌍'),
     ('UHC', '❤️'),
-    ('Boxing', '🥊'),
-    ('No Debuff', '🚫'),
-    ('MLG Rush', '🏃'),
-    ('BedFight', '🛏️'),
-    ('SkyWars', '🏝️'),
-    ('MidFight', '⚔️'),
-    ('Battle Rush', '🏹'),
+    ('Boxing', '<:z_boxing:1043720236630806579>'),
+    ('No Debuff', '<:z_nodebuff:1043720257312931952>'),
+    ('MLG Rush', '<:z_mlgrush:1043720254876024862>'),
+    ('BedFight', '<:z_bedfight:1043720235125051402>'),
+    ('SkyWars', '<:z_skywars:1394897561369841746>'),
+    ('MidFight', '<:z_midfight:1348716069673762826>'),
+    ('Battle Rush', '<:z_battlerush:1043720233266970634>'),
 ]
 
 # Bedrock Edition gamemodes — using your server's exact custom emojis.
