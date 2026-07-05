@@ -49,7 +49,7 @@ JAVA_GAMEMODES = [
     ('MLG Rush', '<:z_mlgrush:1523281279578017812>'),
     ('BedFight', '<:z_bedfight:1523281245184725154>'),
     ('SkyWars', '<:z_skywars:1523281287392133310>'),
-    ('MidFight', '<:z_midfight:1348716069673762826>'),
+    ('MidFight', '<:z_midfight:1523281277393043626>'),
     ('Battle Rush', '<:z_battlerush:1523281243242762330>'),
 ]
 
