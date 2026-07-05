@@ -58,17 +58,10 @@ BEDROCK_GAMEMODES = [
     ('SkyWars', '<:z_skywars:1394897561369841746>'),
     ('MidFight', '<:z_midfight:1348716069673762826>'),
     ('Battle Rush', '<:z_battlerush:1043720233266970634>'),
-    ('Soup PvP', '<:z_soup:1043720265919635456>'),
     ('Bridge', '<:z_bridge:1043720238174314536>'),
     ('Build', '<:z_build:1043720239701045319>'),
     ('Cave UHC', '<:z_caveuhc:1219232048154411039>'),
-    ('Nether UHC', '<:z_netheruhc:1219232051438419978>'),
-    ('Crystal PvP', '<:z_crystalpvp:1348715818371776614>'),
     ('Mace', '<:z_mace:1441952928578539583>'),
-    ('Fireball Mace', '<:fireballmace:1348767021315395636>'),
-    ('Fireball Fight', '<:z_fireballfight:1043720248454565918>'),
-    ('Spleef', '<:z_spleef:1043720267463135262>'),
-    ('Skull', '<:z_skull:1347751270223712319>'),
 ]
 
 GAMEMODES_BY_EDITION = {
