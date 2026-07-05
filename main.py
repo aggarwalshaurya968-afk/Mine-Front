@@ -56,6 +56,7 @@ class TicketBot(commands.Bot):
             "cogs.tickets",
             "cogs.admin",
             "cogs.tier_test",
+            "cogs.access",
         ]
 
         for cog in cogs:
@@ -150,4 +151,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-        
