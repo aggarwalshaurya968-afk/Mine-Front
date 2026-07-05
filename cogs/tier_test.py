@@ -22,25 +22,61 @@ BANNER_PATH = 'assets/tier_testing_banner.png'
 BANNER_FILENAME = 'tier_testing_banner.png'
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  GAMEMODES — shown in the dropdown when applying for tier tester.
-#  Emojis below are the closest Unicode match to your screenshots. If your
-#  server has custom emojis for these (the icons in your screenshots look
-#  like custom server emojis), send me each one as `<:name:id>` (get that by
-#  typing "\:emojiname:" in Discord and copying what it echoes back) and
-#  I'll drop them in for an exact match.
+#  GAMEMODES — separate list per edition. Pick your edition first, then only
+#  that edition's gamemodes show up in the dropdown.
 # ═══════════════════════════════════════════════════════════════════════════════
-GAMEMODES = [
+
+# Java Edition gamemodes (Unicode emoji placeholders — send me your server's
+# custom emoji codes for these the same way you did for Bedrock, and I'll
+# swap them in for an exact match).
+JAVA_GAMEMODES = [
     ('Overall (All Game Modes)', '🌐'),
+    ('Nethpot', '🧪'),
+    ('Axe', '🪓'),
+    ('Dia Pot', '💎'),
+    ('Mace', '🔨'),
+    ('Spear Mace', '🔱'),
+    ('Cart PvP', '🛒'),
+    ('Build UHC', '🏗️'),
+    ('Crystal', '🔮'),
+    ('SMP PvP', '🌍'),
+    ('UHC', '❤️'),
+    ('Boxing', '🥊'),
+    ('No Debuff', '🚫'),
+    ('MLG Rush', '🏃'),
     ('BedFight', '🛏️'),
     ('SkyWars', '🏝️'),
     ('MidFight', '⚔️'),
-    ('MLG Rush', '🏃'),
-    ('Mace', '🔨'),
-    ('UHC', '❤️'),
-    ('Boxing', '🥊'),
-    ('No Debuff', '🧪'),
     ('Battle Rush', '🏹'),
 ]
+
+# Bedrock Edition gamemodes — using your server's exact custom emojis.
+BEDROCK_GAMEMODES = [
+    ('Boxing', '<:z_boxing:1043720236630806579>'),
+    ('MLG Rush', '<:z_mlgrush:1043720254876024862>'),
+    ('No Debuff', '<:z_nodebuff:1043720257312931952>'),
+    ('BedFight', '<:z_bedfight:1043720235125051402>'),
+    ('Build UHC', '<:z_builduhc:1043720241391349780>'),
+    ('SkyWars', '<:z_skywars:1394897561369841746>'),
+    ('MidFight', '<:z_midfight:1348716069673762826>'),
+    ('Battle Rush', '<:z_battlerush:1043720233266970634>'),
+    ('Soup PvP', '<:z_soup:1043720265919635456>'),
+    ('Bridge', '<:z_bridge:1043720238174314536>'),
+    ('Build', '<:z_build:1043720239701045319>'),
+    ('Cave UHC', '<:z_caveuhc:1219232048154411039>'),
+    ('Nether UHC', '<:z_netheruhc:1219232051438419978>'),
+    ('Crystal PvP', '<:z_crystalpvp:1348715818371776614>'),
+    ('Mace', '<:z_mace:1441952928578539583>'),
+    ('Fireball Mace', '<:fireballmace:1348767021315395636>'),
+    ('Fireball Fight', '<:z_fireballfight:1043720248454565918>'),
+    ('Spleef', '<:z_spleef:1043720267463135262>'),
+    ('Skull', '<:z_skull:1347751270223712319>'),
+]
+
+GAMEMODES_BY_EDITION = {
+    'Java Edition': JAVA_GAMEMODES,
+    'Bedrock Edition': BEDROCK_GAMEMODES,
+}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -196,33 +232,7 @@ class TierPanelView(discord.ui.View):
         super().__init__(timeout=None)
         self.bot = bot
 
-    @discord.ui.select(
-        placeholder='Choose which gamemode you want to become a Tier Tester for…',
-        custom_id='tier:gamemode',
-        options=[
-            discord.SelectOption(label=name, value=name, emoji=emoji)
-            for name, emoji in GAMEMODES
-        ],
-    )
-    async def gamemode_select(self, interaction: discord.Interaction, select: discord.ui.Select):
-        gamemode = select.values[0]
-        await interaction.response.send_message(
-            content=f'You picked **{gamemode}**. Now choose your edition:',
-            view=EditionChooseView(self.bot, gamemode),
-            ephemeral=True,
-        )
-
-
-class EditionChooseView(discord.ui.View):
-    """Shown ephemerally after the user picks a gamemode from the panel's
-    dropdown. Carries that gamemode choice into the application modal."""
-
-    def __init__(self, bot, gamemode: str):
-        super().__init__(timeout=120)
-        self.bot = bot
-        self.gamemode = gamemode
-
-    async def _open(self, interaction: discord.Interaction, edition: str):
+    async def _pick_edition(self, interaction: discord.Interaction, edition: str):
         db = self.bot.db
 
         tier_settings = await get_tier_settings(self.bot, interaction.guild_id)
@@ -254,15 +264,42 @@ class EditionChooseView(discord.ui.View):
                 ephemeral=True
             )
 
-        await interaction.response.send_modal(TierApplicationModal(self.bot, edition, self.gamemode))
+        await interaction.response.send_message(
+            content=f'**{edition}** selected. Now pick a gamemode:',
+            view=GamemodeSelectView(self.bot, edition),
+            ephemeral=True,
+        )
 
-    @discord.ui.button(label='Java Edition', emoji='🟩', style=discord.ButtonStyle.success)
+    @discord.ui.button(label='Java Edition', emoji='🟩',
+                       style=discord.ButtonStyle.success, custom_id='tier:java')
     async def java(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._open(interaction, 'Java Edition')
+        await self._pick_edition(interaction, 'Java Edition')
 
-    @discord.ui.button(label='Bedrock Edition', emoji='🟦', style=discord.ButtonStyle.primary)
+    @discord.ui.button(label='Bedrock Edition', emoji='🟦',
+                       style=discord.ButtonStyle.primary, custom_id='tier:bedrock')
     async def bedrock(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._open(interaction, 'Bedrock Edition')
+        await self._pick_edition(interaction, 'Bedrock Edition')
+
+
+class GamemodeSelectView(discord.ui.View):
+    """Shown ephemerally after the user picks their edition. Only lists the
+    gamemodes for that specific edition."""
+
+    def __init__(self, bot, edition: str):
+        super().__init__(timeout=120)
+        self.bot = bot
+        self.edition = edition
+
+        self.gamemode_select.options = [
+            discord.SelectOption(label=name, value=name, emoji=emoji)
+            for name, emoji in GAMEMODES_BY_EDITION[edition]
+        ]
+        self.gamemode_select.placeholder = f'Choose a {edition} gamemode…'
+
+    @discord.ui.select()
+    async def gamemode_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        gamemode = select.values[0]
+        await interaction.response.send_modal(TierApplicationModal(self.bot, self.edition, gamemode))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -270,16 +307,19 @@ class EditionChooseView(discord.ui.View):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def tier_panel_embed(guild: discord.Guild) -> discord.Embed:
+    java_lines = '\n'.join(f'{emoji} **{name}**' for name, emoji in JAVA_GAMEMODES)
+    bedrock_lines = '\n'.join(f'{emoji} **{name}**' for name, emoji in BEDROCK_GAMEMODES)
     e = discord.Embed(
         title='🎮 Mine Front Tier Tester Applications',
         description=(
             f'Want to become a **Tier Tester** at **{guild.name}**?\n\n'
-            'Pick the gamemode you want to test from the dropdown below, then '
-            'choose your edition (Java/Bedrock) and fill out the application.\n'
+            'Pick your edition below, then choose the gamemode you want to test '
+            'and fill out the application.\n'
             'Our team will review it and get back to you soon.\n\n'
             '━━━━━━━━━━━━━━━━━━━━━━\n'
-            + '\n'.join(f'{emoji} **{name}**' for name, emoji in GAMEMODES) +
-            '\n━━━━━━━━━━━━━━━━━━━━━━\n\n'
+            f'🟩 **Java Edition gamemodes**\n{java_lines}\n\n'
+            f'🟦 **Bedrock Edition gamemodes**\n{bedrock_lines}\n'
+            '━━━━━━━━━━━━━━━━━━━━━━\n\n'
             '> ⚠️ One application per user · Please be patient'
         ),
         color=PURPLE,
