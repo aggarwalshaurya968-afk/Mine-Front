@@ -12,23 +12,23 @@ import utils.embeds as E
 logger = logging.getLogger('TicketBot.access')
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  /access  —  ACCESS
+#  /access  —  PREMIUM ACCESS SYSTEM
 #
-#  Sirf bot ka REAL owner (jo Discord Developer Portal me application ka
-#  owner hai — discord.py isko khud verify karta hai, koi role/permission
-#  spoof nahi kar sakta) hi kisi user ko premium access grant/revoke kar
-#  sakta hai. Server admin, manage-server wale, ya koi bhi normal member
-#  isko kabhi bhi use nahi kar payega, chahe unke paas Administrator
-#  permission hi kyun na ho — check Discord permissions par nahi, sirf
-#  bot application owner ki asli identity par based hai.
+#  Only the bot's REAL owner (the actual owner of the application in the
+#  Discord Developer Portal — discord.py verifies this itself, it cannot
+#  be spoofed by any role or permission) can grant or revoke premium
+#  access for a user. Server admins, people with Manage Server, or any
+#  regular member can never use this, no matter what Discord permissions
+#  they have — the check is based on the bot application's real owner
+#  identity, not on server permissions.
 #
-#  Doosre cogs/commands me kisi feature ko "premium-only" banane ke liye
-#  bas neeche diya hua `has_access()` helper import karke use karo:
+#  To gate any feature in another cog/command as "premium-only", just
+#  import the `has_access()` helper below and use it like this:
 #
 #      from cogs.access import has_access
 #      if not await has_access(bot, interaction.user.id):
 #          return await interaction.response.send_message(
-#              embed=E.error("Ye feature sirf premium access wale users ke liye hai."),
+#              embed=E.error("This feature is only available to premium access users."),
 #              ephemeral=True
 #          )
 # ═══════════════════════════════════════════════════════════════════════════
@@ -94,16 +94,16 @@ class AccessCog(commands.Cog):
         await _ensure_table(self.bot)
 
     # ─────────────────────────── Owner Gate ──────────────────────────────
-    # is_owner() discord.py ke andar hi application_info() fetch karke
-    # asli owner (ya team owner) ki ID cache karta hai — ye kisi role,
-    # server permission, ya config file se override nahi hota.
+    # is_owner() fetches application_info() internally and caches the
+    # real owner's (or team owner's) ID — this cannot be overridden by
+    # any role, server permission, or config file.
     async def _require_owner(self, interaction: discord.Interaction) -> bool:
         if await self.bot.is_owner(interaction.user):
             return True
         await interaction.response.send_message(
             embed=E.error(
-                '❌ Ye command sirf bot ke **real owner** hi use kar sakte hain.\n'
-                'Server admin ya koi bhi normal member ise use nahi kar sakta.'
+                '❌ This command can only be used by the **real owner** of the bot.\n'
+                'Server admins or any regular member cannot use this.'
             ),
             ephemeral=True
         )
@@ -125,7 +125,7 @@ class AccessCog(commands.Cog):
         logger.info(f'Premium access granted to {user} ({user.id}) by owner {interaction.user} ({interaction.user.id})')
 
         await interaction.response.send_message(
-            embed=E.success(f'✅ {user.mention} ko premium access de diya gaya hai.' + (f'\n📝 Note: {note}' if note else '')),
+            embed=E.success(f'✅ {user.mention} has been granted premium access.' + (f'\n📝 Note: {note}' if note else '')),
             ephemeral=True
         )
 
@@ -141,12 +141,12 @@ class AccessCog(commands.Cog):
 
         if removed:
             await interaction.response.send_message(
-                embed=E.success(f'✅ {user.mention} ka premium access hata diya gaya hai.'),
+                embed=E.success(f'✅ Premium access has been removed from {user.mention}.'),
                 ephemeral=True
             )
         else:
             await interaction.response.send_message(
-                embed=E.error(f'{user.mention} ke paas pehle se koi premium access nahi tha.'),
+                embed=E.error(f'{user.mention} did not have premium access to begin with.'),
                 ephemeral=True
             )
 
@@ -159,7 +159,7 @@ class AccessCog(commands.Cog):
         rows = await list_access(self.bot)
         if not rows:
             return await interaction.response.send_message(
-                embed=E.base('Premium Access List', 'Abhi tak kisi ko bhi access nahi diya gaya hai.'),
+                embed=E.base('Premium Access List', 'No one has been granted access yet.'),
                 ephemeral=True
             )
 
@@ -180,12 +180,13 @@ class AccessCog(commands.Cog):
         allowed = await has_access(self.bot, target.id)
 
         await interaction.response.send_message(
-            embed=(E.success(f'{target.mention} ke paas premium access **hai**.')
+            embed=(E.success(f'{target.mention} **has** premium access.')
                    if allowed else
-                   E.error(f'{target.mention} ke paas premium access **nahi** hai.')),
+                   E.error(f'{target.mention} does **not** have premium access.')),
             ephemeral=True
         )
 
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(AccessCog(bot))
+        
