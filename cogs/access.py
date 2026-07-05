@@ -86,6 +86,70 @@ async def list_access(bot: commands.Bot) -> list[dict]:
             return [dict(r) for r in await cur.fetchall()]
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+#  SHARED PERMISSION HELPERS
+#
+#  Every command in this bot (across every cog) is locked down to only
+#  the bot's real Owner or a server Admin. Import these two helpers into
+#  any other cog to apply the exact same rule:
+#
+#      from cogs.access import require_admin_or_owner
+#
+#      async def mycommand(self, interaction: discord.Interaction):
+#          if not await require_admin_or_owner(self.bot, interaction):
+#              return
+#          ...
+# ═══════════════════════════════════════════════════════════════════════════
+
+async def is_admin_or_owner(bot: commands.Bot, interaction: discord.Interaction) -> bool:
+    """Return True if the user is the bot's real owner OR a server admin
+    (either the native Discord 'Administrator' permission, or a role that
+    has been configured as an Admin role via /setrole)."""
+    if await bot.is_owner(interaction.user):
+        return True
+    if interaction.guild is None or not isinstance(interaction.user, discord.Member):
+        return False
+    if interaction.user.guild_permissions.administrator:
+        return True
+    settings = await bot.db.get_settings(interaction.guild_id) or {}
+    admin_roles = settings.get('admin_role_ids', [])
+    member_roles = {r.id for r in interaction.user.roles}
+    return any(r in member_roles for r in admin_roles)
+
+
+async def require_admin_or_owner(bot: commands.Bot, interaction: discord.Interaction) -> bool:
+    """Check is_admin_or_owner() and, if it fails, send the standard denial
+    message. Returns True/False so callers can just do:
+        if not await require_admin_or_owner(self.bot, interaction):
+            return
+    """
+    if await is_admin_or_owner(bot, interaction):
+        return True
+    await interaction.response.send_message(
+        embed=E.error(
+            '❌ This command can only be used by a server **Admin** or the bot **Owner**.'
+        ),
+        ephemeral=True
+    )
+    return False
+
+
+# Static reference used by /access commands below. Update this list if you
+# add, rename, or remove commands elsewhere in the bot.
+COMMAND_PERMISSIONS = {
+    'Owner Only': [
+        '/access grant', '/access revoke', '/access list',
+    ],
+    'Admin + Owner': [
+        '/access check', '/access commands',
+        '/adminpanel', '/blacklist', '/unblacklist', '/setrole', '/removerole',
+        '/settings', '/botping',
+        '/setup', '/newticket', '/close', '/claim', '/transcript', '/add', '/remove',
+        '/tierpanel', '/tiersettings', '/tieradminpanel',
+    ],
+}
+
+
 class AccessCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -173,9 +237,12 @@ class AccessCog(commands.Cog):
         )
 
     # ─────────────────────────── /access check ───────────────────────────
-    @access_group.command(name='check', description='Check if a user currently has access.')
+    @access_group.command(name='check', description='(Admin/Owner only) Check if a user currently has access.')
     @app_commands.describe(user='User to check (defaults to yourself)')
     async def check(self, interaction: discord.Interaction, user: discord.User = None):
+        if not await require_admin_or_owner(self.bot, interaction):
+            return
+
         target = user or interaction.user
         allowed = await has_access(self.bot, target.id)
 
@@ -186,7 +253,25 @@ class AccessCog(commands.Cog):
             ephemeral=True
         )
 
+    # ─────────────────────────── /access commands ─────────────────────────
+    @access_group.command(name='commands', description='(Admin/Owner only) Show which commands can be used by whom.')
+    async def commands_(self, interaction: discord.Interaction):
+        if not await require_admin_or_owner(self.bot, interaction):
+            return
+
+        lines = []
+        for group_name, cmds in COMMAND_PERMISSIONS.items():
+            lines.append(f'**{group_name}**')
+            lines.append(', '.join(cmds))
+            lines.append('')
+
+        await interaction.response.send_message(
+            embed=E.base('Command Permissions', '\n'.join(lines).strip()),
+            ephemeral=True
+        )
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(AccessCog(bot))
-        
+
+
