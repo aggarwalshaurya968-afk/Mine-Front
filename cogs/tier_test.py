@@ -455,4 +455,344 @@ def tier_admin_embed(guild: discord.Guild, settings: dict,
 
 
 def gamemode_manage_embed(edition: str, gamemodes: list[tuple[str, str]]) -> discord.Embed:
-    lines = '\n'.join(f'
+    lines = '\n'.join(f'{emoji} **{name}**' for name, emoji in gamemodes) or '_No gamemodes configured._'
+    e = discord.Embed(
+        title=f'🎮  Manage {edition} Gamemodes',
+        description=(
+            f'{lines}\n\n'
+            '━━━━━━━━━━━━━━━━━━━━━━\n'
+            'Add a new gamemode, remove one from the dropdown, or reset back '
+            'to the built-in default list.'
+        ),
+        color=PURPLE,
+        timestamp=datetime.now(timezone.utc)
+    )
+    e.set_footer(text=f'Mine Front Ticket System  •  {len(gamemodes)}/25 gamemodes')
+    return e
+
+
+# ── Modals ───────────────────────────────────────────────────────────────────
+
+class AddGamemodeModal(discord.ui.Modal):
+    def __init__(self, bot, edition: str):
+        super().__init__(title=f'➕  Add {edition} Gamemode', timeout=120)
+        self.bot = bot
+        self.edition = edition
+        self.name_input = discord.ui.TextInput(
+            label='Gamemode Name',
+            placeholder='e.g. Sumo',
+            required=True,
+            max_length=50,
+        )
+        self.emoji_input = discord.ui.TextInput(
+            label='Emoji (unicode or <:name:id>)',
+            placeholder='e.g. ⚔️  or  <:z_sumo:123456789012345678>',
+            required=False,
+            max_length=100,
+        )
+        self.add_item(self.name_input)
+        self.add_item(self.emoji_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        name = self.name_input.value.strip()
+        emoji = self.emoji_input.value.strip() or '🎮'
+        ok, msg = await add_gamemode(self.bot, interaction.guild_id, self.edition, name, emoji)
+        await interaction.followup.send(embed=(E.success(msg) if ok else E.error(msg)), ephemeral=True)
+
+
+class BannerModal(discord.ui.Modal, title='🖼️  Set Panel Banner'):
+    url = discord.ui.TextInput(
+        label='Image URL',
+        placeholder='https://example.com/banner.png',
+        required=True,
+        max_length=500,
+    )
+
+    def __init__(self, bot):
+        super().__init__(timeout=120)
+        self.bot = bot
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        value = self.url.value.strip()
+        if not value.lower().startswith(('http://', 'https://')):
+            return await interaction.followup.send(
+                embed=E.error('Please provide a valid image URL starting with http:// or https://'),
+                ephemeral=True)
+        await set_banner_url(self.bot, interaction.guild_id, value)
+        await interaction.followup.send(
+            embed=E.success('Panel banner updated. Run `/tierpanel` again to post a fresh panel with it.'),
+            ephemeral=True)
+
+
+class TierCooldownModal(discord.ui.Modal, title='⏱️  Set Tier Cooldown Override'):
+    seconds = discord.ui.TextInput(
+        label='Cooldown (seconds)',
+        placeholder='e.g. 600',
+        required=True,
+        max_length=6,
+    )
+
+    def __init__(self, bot):
+        super().__init__(timeout=120)
+        self.bot = bot
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        try:
+            val = int(self.seconds.value.strip())
+            if val < 0:
+                raise ValueError
+        except ValueError:
+            return await interaction.followup.send(embed=E.error('Enter a valid positive number.'), ephemeral=True)
+        await set_tier_cooldown(self.bot, interaction.guild_id, val)
+        await interaction.followup.send(
+            embed=E.success(f'Tier Tester cooldown override set to **{val}** seconds.'), ephemeral=True)
+
+
+# ── Sub-views ────────────────────────────────────────────────────────────────
+
+class GamemodeResetConfirmView(discord.ui.View):
+    def __init__(self, bot, edition: str):
+        super().__init__(timeout=60)
+        self.bot = bot
+        self.edition = edition
+
+    @discord.ui.button(label='Confirm Reset', style=discord.ButtonStyle.danger, emoji='🔄')
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await reset_gamemodes(self.bot, interaction.guild_id, self.edition)
+        await interaction.response.send_message(
+            embed=E.success(f'{self.edition} gamemodes have been reset to the default list.'), ephemeral=True)
+        self.stop()
+
+    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.secondary, emoji='✖️')
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(
+            embed=E.base('✖️  Cancelled', 'Reset was cancelled.', color=GREY), ephemeral=True)
+        self.stop()
+
+
+class GamemodeManageView(discord.ui.View):
+    def __init__(self, bot, edition: str, gamemodes: list[tuple[str, str]]):
+        super().__init__(timeout=180)
+        self.bot = bot
+        self.edition = edition
+
+        if gamemodes:
+            self.remove_select.options = [
+                discord.SelectOption(label=name, value=name, emoji=emoji)
+                for name, emoji in gamemodes[:25]
+            ]
+            self.remove_select.placeholder = f'Select a {edition} gamemode to remove…'
+        else:
+            self.remove_select.disabled = True
+            self.remove_select.options = [discord.SelectOption(label='No gamemodes configured', value='__none__')]
+            self.remove_select.placeholder = 'No gamemodes to remove'
+
+    @discord.ui.button(label='Add Gamemode', emoji='➕', style=discord.ButtonStyle.success, row=0)
+    async def add(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(AddGamemodeModal(self.bot, self.edition))
+
+    @discord.ui.select(row=1)
+    async def remove_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        name = select.values[0]
+        if name == '__none__':
+            return await interaction.response.send_message(embed=E.error('Nothing to remove.'), ephemeral=True)
+        await remove_gamemode(self.bot, interaction.guild_id, self.edition, name)
+        await interaction.response.send_message(
+            embed=E.success(f'Removed **{name}** from {self.edition}.'), ephemeral=True)
+
+    @discord.ui.button(label='Reset to Default', emoji='🔄', style=discord.ButtonStyle.danger, row=2)
+    async def reset(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(
+            embed=E.base(
+                '⚠️  Confirm Reset',
+                f'Reset **{self.edition}** gamemodes to the built-in default list?\n'
+                'Any custom gamemodes you added will be lost.',
+                color=ORANGE
+            ),
+            view=GamemodeResetConfirmView(self.bot, self.edition),
+            ephemeral=True
+        )
+
+
+class TierAdminPanelView(discord.ui.View):
+    def __init__(self, bot):
+        super().__init__(timeout=300)
+        self.bot = bot
+
+    async def _refresh(self, interaction: discord.Interaction):
+        settings = await get_tier_settings(self.bot, interaction.guild_id)
+        java_gm = await get_gamemodes(self.bot, interaction.guild_id, 'Java Edition')
+        bedrock_gm = await get_gamemodes(self.bot, interaction.guild_id, 'Bedrock Edition')
+        ticket_settings = await self.bot.db.get_settings(interaction.guild_id) or {}
+        default_cd = ticket_settings.get('cooldown_seconds', 300)
+        embed = tier_admin_embed(interaction.guild, settings, java_gm, bedrock_gm, default_cd)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    # ── Row 0: toggles ──────────────────────────────────────────────────────
+    @discord.ui.button(label='Toggle Java', emoji='🟩', style=discord.ButtonStyle.success, row=0)
+    async def toggle_java(self, interaction: discord.Interaction, button: discord.ui.Button):
+        settings = await get_tier_settings(self.bot, interaction.guild_id)
+        await set_tier_toggle(self.bot, interaction.guild_id, 'java_enabled', not bool(settings.get('java_enabled', 1)))
+        await self._refresh(interaction)
+
+    @discord.ui.button(label='Toggle Bedrock', emoji='🟦', style=discord.ButtonStyle.primary, row=0)
+    async def toggle_bedrock(self, interaction: discord.Interaction, button: discord.ui.Button):
+        settings = await get_tier_settings(self.bot, interaction.guild_id)
+        await set_tier_toggle(self.bot, interaction.guild_id, 'bedrock_enabled', not bool(settings.get('bedrock_enabled', 1)))
+        await self._refresh(interaction)
+
+    @discord.ui.button(label='Refresh', emoji='🔄', style=discord.ButtonStyle.secondary, row=0)
+    async def refresh(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._refresh(interaction)
+
+    # ── Row 1: gamemode management ──────────────────────────────────────────
+    @discord.ui.button(label='Java Gamemodes', emoji='🎮', style=discord.ButtonStyle.secondary, row=1)
+    async def manage_java(self, interaction: discord.Interaction, button: discord.ui.Button):
+        gamemodes = await get_gamemodes(self.bot, interaction.guild_id, 'Java Edition')
+        await interaction.response.send_message(
+            embed=gamemode_manage_embed('Java Edition', gamemodes),
+            view=GamemodeManageView(self.bot, 'Java Edition', gamemodes),
+            ephemeral=True
+        )
+
+    @discord.ui.button(label='Bedrock Gamemodes', emoji='🎮', style=discord.ButtonStyle.secondary, row=1)
+    async def manage_bedrock(self, interaction: discord.Interaction, button: discord.ui.Button):
+        gamemodes = await get_gamemodes(self.bot, interaction.guild_id, 'Bedrock Edition')
+        await interaction.response.send_message(
+            embed=gamemode_manage_embed('Bedrock Edition', gamemodes),
+            view=GamemodeManageView(self.bot, 'Bedrock Edition', gamemodes),
+            ephemeral=True
+        )
+
+    # ── Row 2: banner ────────────────────────────────────────────────────────
+    @discord.ui.button(label='Set Banner URL', emoji='🖼️', style=discord.ButtonStyle.secondary, row=2)
+    async def set_banner(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(BannerModal(self.bot))
+
+    @discord.ui.button(label='Clear Banner', emoji='🧹', style=discord.ButtonStyle.secondary, row=2)
+    async def clear_banner(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await set_banner_url(self.bot, interaction.guild_id, None)
+        await interaction.response.send_message(
+            embed=E.success('Banner reset — the default local image will be used again.'), ephemeral=True)
+
+    # ── Row 3: cooldown ──────────────────────────────────────────────────────
+    @discord.ui.button(label='Set Cooldown', emoji='⏱️', style=discord.ButtonStyle.secondary, row=3)
+    async def set_cooldown(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(TierCooldownModal(self.bot))
+
+    @discord.ui.button(label='Clear Cooldown', emoji='♻️', style=discord.ButtonStyle.secondary, row=3)
+    async def clear_cooldown(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await set_tier_cooldown(self.bot, interaction.guild_id, None)
+        await interaction.response.send_message(
+            embed=E.success('Cooldown override cleared — using the ticket system default again.'), ephemeral=True)
+
+
+# ── Legacy quick-toggle settings (kept for backwards compatibility) ─────────
+
+def tier_settings_embed(guild: discord.Guild, settings: dict) -> discord.Embed:
+    java = '✅ Enabled' if settings.get('java_enabled', 1) else '❌ Disabled'
+    bedrock = '✅ Enabled' if settings.get('bedrock_enabled', 1) else '❌ Disabled'
+    e = discord.Embed(
+        title='🎮  Tier Tester Settings',
+        description=f'Managing Tier Tester applications for **{guild.name}**\n\n'
+                    'Toggle which editions can currently apply to become a Tier Tester.\n'
+                    '> For full control (gamemodes, banner, cooldown), use `/tieradminpanel`.',
+        color=PURPLE,
+        timestamp=datetime.now(timezone.utc)
+    )
+    e.add_field(name='🟩 Java Edition', value=java, inline=True)
+    e.add_field(name='🟦 Bedrock Edition', value=bedrock, inline=True)
+    e.set_footer(text='Mine Front Ticket System  •  Tier Tester Settings')
+    return e
+
+
+class TierSettingsView(discord.ui.View):
+    def __init__(self, bot, settings: dict):
+        super().__init__(timeout=120)
+        self.bot = bot
+        self.settings = settings
+
+    @discord.ui.button(label='Toggle Java', emoji='🟩', style=discord.ButtonStyle.success)
+    async def toggle_java(self, interaction: discord.Interaction, button: discord.ui.Button):
+        new_val = not bool(self.settings.get('java_enabled', 1))
+        await set_tier_toggle(self.bot, interaction.guild_id, 'java_enabled', new_val)
+        self.settings['java_enabled'] = int(new_val)
+        status = '✅ Enabled' if new_val else '❌ Disabled'
+        await interaction.response.send_message(
+            embed=E.success(f'Java Edition Tier Tester applications: **{status}**'), ephemeral=True)
+
+    @discord.ui.button(label='Toggle Bedrock', emoji='🟦', style=discord.ButtonStyle.primary)
+    async def toggle_bedrock(self, interaction: discord.Interaction, button: discord.ui.Button):
+        new_val = not bool(self.settings.get('bedrock_enabled', 1))
+        await set_tier_toggle(self.bot, interaction.guild_id, 'bedrock_enabled', new_val)
+        self.settings['bedrock_enabled'] = int(new_val)
+        status = '✅ Enabled' if new_val else '❌ Disabled'
+        await interaction.response.send_message(
+            embed=E.success(f'Bedrock Edition Tier Tester applications: **{status}**'), ephemeral=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  COG
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TierPanel(commands.Cog, name='TierTest'):
+    def __init__(self, bot):
+        self.bot = bot
+        bot.add_view(TierPanelView(bot))
+        # NOTE: TicketControlView is already registered persistently by TicketsCog,
+        # so it is not re-registered here to avoid touching that flow.
+
+    @app_commands.command(name='tierpanel', description='Post the Tier Tester application panel.')
+    @app_commands.default_permissions(administrator=True)
+    async def tierpanel(self, interaction: discord.Interaction):
+        settings = await get_tier_settings(self.bot, interaction.guild_id)
+        embed = await tier_panel_embed(self.bot, interaction.guild)
+        view = TierPanelView(self.bot)
+
+        if settings.get('banner_url'):
+            # Using a custom banner URL — no file attachment needed.
+            await interaction.response.send_message(embed=embed, view=view)
+            return
+
+        try:
+            file = discord.File(BANNER_PATH, filename=BANNER_FILENAME)
+            await interaction.response.send_message(embed=embed, view=view, file=file)
+        except FileNotFoundError:
+            logger.warning(f'Banner image not found at {BANNER_PATH}, sending without image.')
+            embed.set_image(url=None)
+            await interaction.response.send_message(embed=embed, view=view)
+
+    # /tiersettings — quick legacy toggle, still works exactly as before.
+    @app_commands.command(name='tiersettings', description='Quickly toggle Java/Bedrock Tier Tester applications on-off.')
+    @app_commands.default_permissions(administrator=True)
+    async def tiersettings(self, interaction: discord.Interaction):
+        settings = await get_tier_settings(self.bot, interaction.guild_id)
+        await interaction.response.send_message(
+            embed=tier_settings_embed(interaction.guild, settings),
+            view=TierSettingsView(self.bot, settings),
+            ephemeral=True
+        )
+
+    # /tieradminpanel — the full control center for everything tier-related:
+    # edition toggles, per-edition gamemode add/remove/reset, custom banner
+    # URL, and an optional cooldown override just for Tier Tester tickets.
+    # Uses the SAME guild_settings (log channel, transcript channel, roles)
+    # as your support tickets, because create_ticket() above is shared.
+    @app_commands.command(name='tieradminpanel', description='Full admin panel to manage everything about the Tier Tester system.')
+    @app_commands.default_permissions(administrator=True)
+    async def tieradminpanel(self, interaction: discord.Interaction):
+        settings = await get_tier_settings(self.bot, interaction.guild_id)
+        java_gm = await get_gamemodes(self.bot, interaction.guild_id, 'Java Edition')
+        bedrock_gm = await get_gamemodes(self.bot, interaction.guild_id, 'Bedrock Edition')
+        ticket_settings = await self.bot.db.get_settings(interaction.guild_id) or {}
+        default_cd = ticket_settings.get('cooldown_seconds', 300)
+
+        embed = tier_admin_embed(interaction.guild, settings, java_gm, bedrock_gm, default_cd)
+        await interaction.response.send_message(embed=embed, view=TierAdminPanelView(self.bot), ephemeral=True)
+
+
+async def setup(bot):
+    await bot.add_cog(TierPanel(bot))
