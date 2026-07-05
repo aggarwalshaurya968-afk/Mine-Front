@@ -39,7 +39,7 @@ JAVA_GAMEMODES = [
     ('Crystal', '<:z_crystalpvp:1348715818371776614>'),
     ('SMP PvP', '🌍'),
     ('UHC', '❤️'),
-    ('Boxing', '<:z_boxing:1043720236630806579>'),
+    ('Boxing', ':z_boxing:'),
     ('No Debuff', '<:z_nodebuff:1043720257312931952>'),
     ('MLG Rush', '<:z_mlgrush:1043720254876024862>'),
     ('BedFight', '<:z_bedfight:1043720235125051402>'),
