@@ -85,7 +85,7 @@ class TicketBot(commands.Bot):
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
-                name="🎫 Mine Front Ticket "
+                name="🎫 Tier Testing "
             ),
             status=discord.Status.online
         )
