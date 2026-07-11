@@ -4,7 +4,7 @@ import discord
 from config import (PURPLE, PURPLE_DARK, PURPLE_LIGHT,
                     GREEN, RED, ORANGE, BLUE)
 
-FOOTER = 'Mine Front Ticket System'
+FOOTER = 'Tier Testing, Support Ticket System'
 
 
 def _now_ts() -> int:
@@ -26,7 +26,7 @@ def ticket_panel(guild: discord.Guild, categories: list[dict]) -> discord.Embed:
         for c in categories if c['enabled']
     )
     e = discord.Embed(
-        title='🎫 Mine Front Support Center',
+        title='🎫 Support Center',
         description=(
             f'Welcome to **{guild.name}** Support!\n\n'
             'Select a category below that matches your issue.\n'
