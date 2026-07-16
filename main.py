@@ -57,6 +57,7 @@ class TicketBot(commands.Bot):
             "cogs.admin",
             "cogs.tier_test",
             "cogs.access",
+            "cogs.ai_qa",
         ]
 
         for cog in cogs:
